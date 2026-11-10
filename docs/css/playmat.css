@@ -1,0 +1,547 @@
+/* public/css/playmat.css */
+/* Exact replica of the green PTCG Playmat from S__12115980.jpg */
+
+.battle-container {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: calc(100vh - 62px);
+  position: relative;
+  overflow: hidden;
+  background: #08110b;
+}
+
+/* Playmat Area */
+.playmat-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 12px;
+  overflow: auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.ptcg-playmat {
+  width: 100%;
+  max-width: 1100px;
+  aspect-ratio: 1 / 1;
+  max-height: 820px;
+  background-color: #236934;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(46, 125, 50, 0.6) 0%, rgba(20, 60, 28, 0.9) 100%),
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 33.33% 33.33%, 33.33% 33.33%;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 0 40px rgba(0, 0, 0, 0.4);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  user-select: none;
+  border: 4px solid #14401c;
+}
+
+.ptcg-playmat.photo-mode {
+  background-image: url('../playmat.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.ptcg-playmat.photo-mode .mat-center-pokeball {
+  display: none; /* Hide digital overlay pokeball when authentic printed photo is active */
+}
+
+/* Playmat Center Pokéball Decoration */
+.mat-center-pokeball {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 240px;
+  border: 6px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mat-center-pokeball::before {
+  content: '';
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border: 6px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  background: #236934;
+}
+.mat-center-pokeball::after {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border: 4px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Top & Bottom Player Halves */
+.mat-player-half {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 140px 1fr 140px;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.mat-player-half.opponent-half {
+  transform: rotate(0deg); /* Oriented as shown in photo */
+}
+
+/* Slot Styling */
+.mat-slot {
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  background: rgba(0, 0, 0, 0.12);
+}
+.mat-slot-label {
+  position: absolute;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 2px;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* OPPONENT LAYOUT (Matching photo S__12115980.jpg) */
+/* Top-Left: 弃牌区 */
+.opp-discard-slot {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100px;
+  height: 140px;
+  margin: auto;
+}
+/* Mid-Left: 牌库 */
+.opp-deck-slot {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100px;
+  height: 140px;
+  margin: auto;
+}
+/* Top-Center: 备战区 (5 Bench slots) */
+.opp-bench-row {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+}
+/* Center-Top: 战斗场 (Active) */
+.opp-active-slot {
+  grid-column: 2;
+  grid-row: 2;
+  width: 110px;
+  height: 154px;
+  margin: auto;
+  border-width: 3px;
+}
+/* Top-Right: 奖赏卡 (6 Prize Cards) */
+.opp-prize-zone {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  display: grid;
+  grid-template-columns: repeat(2, 50px);
+  grid-template-rows: repeat(3, 70px);
+  gap: 6px;
+  justify-content: center;
+  align-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  padding: 8px;
+  position: relative;
+}
+
+/* PLAYER LAYOUT (Bottom half, matching photo S__12115980.jpg) */
+/* Bottom-Left: 奖赏卡 (6 Prize Cards) */
+.player-prize-zone {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: grid;
+  grid-template-columns: repeat(2, 50px);
+  grid-template-rows: repeat(3, 70px);
+  gap: 6px;
+  justify-content: center;
+  align-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  padding: 8px;
+  position: relative;
+}
+/* Center-Front: 战斗场 (Active) */
+.player-active-slot {
+  grid-column: 2;
+  grid-row: 1;
+  width: 110px;
+  height: 154px;
+  margin: auto;
+  border-width: 3px;
+}
+/* Center-Back: 备战区 (5 Bench slots) */
+.player-bench-row {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+}
+/* Mid-Right: 牌库 */
+.player-deck-slot {
+  grid-column: 3;
+  grid-row: 1;
+  width: 100px;
+  height: 140px;
+  margin: auto;
+}
+/* Bottom-Right: 弃牌区 */
+.player-discard-slot {
+  grid-column: 3;
+  grid-row: 2;
+  width: 100px;
+  height: 140px;
+  margin: auto;
+}
+
+/* Bench Slot */
+.bench-card-slot {
+  width: 90px;
+  height: 126px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Card Visual Design */
+.ptcg-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid #e2e8f0;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+.ptcg-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+/* Card Back */
+.ptcg-card-back {
+  background: radial-gradient(circle at 50% 50%, #1e3a8a 0%, #0f172a 100%);
+  border: 2px solid #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ptcg-card-back::after {
+  content: '';
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #ef4444 48%, #1e293b 48%, #1e293b 52%, #ffffff 52%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Card Header */
+.card-header {
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: bold;
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+}
+.card-type-tag {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #e2e8f0;
+}
+.card-hp {
+  color: #dc2626;
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+/* Card Art Area */
+.card-artwork {
+  flex: 1;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.card-emoji-art {
+  font-size: 2.2rem;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+/* Card Footer / Stats */
+.card-footer {
+  padding: 4px;
+  background: #ffffff;
+  font-size: 0.65rem;
+}
+.card-attack-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 2px;
+  margin-top: 2px;
+}
+.card-attack-name {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
+.card-attack-dmg {
+  font-weight: 800;
+  color: #dc2626;
+}
+
+/* Attached Energies Badge */
+.energy-attached-strip {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  display: flex;
+  gap: 2px;
+  z-index: 5;
+}
+.energy-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: bold;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.energy-Fire { background: #ef4444; }
+.energy-Water { background: #3b82f6; }
+.energy-Lightning { background: #eab308; }
+.energy-Grass { background: #22c55e; }
+.energy-Psychic { background: #a855f7; }
+.energy-Fighting { background: #f97316; }
+.energy-Darkness { background: #334155; }
+.energy-Metal { background: #94a3b8; }
+.energy-Colorless { background: #cbd5e1; color: #1e293b; }
+
+/* Damage Counter Overlay */
+.damage-counter-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 10px;
+  border: 1px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  z-index: 6;
+  animation: pulse 1s infinite alternate;
+}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.1); }
+}
+
+/* Tool Badge */
+.tool-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 4px;
+  z-index: 6;
+}
+
+/* Hand Area Docked at Screen Bottom */
+.player-hand-dock {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 360px; /* leaves room for battle log */
+  height: 120px;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.7) 70%, transparent 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  z-index: 50;
+  transition: transform 0.2s;
+}
+.player-hand-scroll {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  max-width: 100%;
+  overflow-x: auto;
+  align-items: flex-end;
+}
+.hand-card-item {
+  width: 76px;
+  height: 106px;
+  flex-shrink: 0;
+  transition: transform 0.2s, margin 0.2s;
+}
+.hand-card-item:hover {
+  transform: translateY(-24px) scale(1.2);
+  z-index: 100;
+}
+
+/* Battle Sidebar: Log & Controls */
+.battle-sidebar {
+  width: 360px;
+  background: #0f172a;
+  border-left: 2px solid #334155;
+  display: flex;
+  flex-direction: column;
+  z-index: 60;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.turn-indicator-box {
+  padding: 16px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 2px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.turn-number {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #38bdf8;
+}
+.active-player-name {
+  font-size: 0.95rem;
+  font-weight: bold;
+}
+
+.action-controls-panel {
+  padding: 14px;
+  border-bottom: 1px solid #334155;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.combat-log-container {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  background: #090e17;
+}
+.log-entry {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.5);
+  border-left: 3px solid #64748b;
+  color: #cbd5e1;
+}
+.log-entry.turn-header {
+  border-left-color: #38bdf8;
+  font-weight: bold;
+  background: rgba(56, 189, 248, 0.1);
+  color: #7dd3fc;
+}
+.log-entry.attack {
+  border-left-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+.log-entry.ko {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  font-weight: bold;
+}
+
+/* Card Detail Modal */
+.card-detail-popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+.card-detail-popup.active {
+  display: flex;
+}
+.card-detail-card {
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 440px;
+  border: 1px solid #475569;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

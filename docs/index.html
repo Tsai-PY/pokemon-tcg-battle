@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>寶可夢紙牌（PTCG）對戰系統</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/playmat.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="logo-container" id="logo-home-btn">
+      <div class="pokeball-icon"></div>
+      <div>
+        <div class="brand-title">寶可夢紙牌對戰系統</div>
+        <div class="brand-subtitle">Pokémon TCG Official Battle Simulator</div>
+      </div>
+    </div>
+
+    <nav class="nav-links" id="main-nav" style="display: none;">
+      <button class="nav-btn active" data-view="view-decks">🎴 共同牌庫 (5組)</button>
+      <button class="nav-btn" data-view="view-match">⚔️ 開始對戰</button>
+      <button class="nav-btn" data-view="view-admin" id="nav-admin-btn" style="display: none;">👑 管理員審核</button>
+    </nav>
+
+    <div class="user-badge" id="user-badge" style="display: none;">
+      <div class="user-avatar" id="header-avatar">P</div>
+      <div class="user-info">
+        <span class="user-name" id="header-username">訓練家</span>
+        <span class="user-role" id="header-userrole">會員</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="logout-btn" style="margin-left: 8px;">登出</button>
+    </div>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="app-content">
+
+    <!-- 1. AUTH VIEW (Login & Register) -->
+    <section id="view-auth" class="view-section active">
+      <div class="auth-wrapper glass-card">
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" data-tab="tab-login">會員登入</button>
+          <button class="auth-tab-btn" data-tab="tab-register">申請會員</button>
+        </div>
+
+        <div id="auth-alert" style="display: none;"></div>
+
+        <!-- Login Form -->
+        <form id="form-login">
+          <div class="form-group">
+            <label>行動電話帳號（10碼）</label>
+            <input type="tel" class="form-control" id="login-phone" placeholder="例如：0912345678" required maxlength="10">
+          </div>
+          <div class="form-group">
+            <label>密碼（西元生日8碼）</label>
+            <input type="password" class="form-control" id="login-birthday" placeholder="例如：19950520" required maxlength="8">
+            <div class="form-hint">密碼格式為西元出生年月日8碼（YYYYMMDD）</div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">登入系統</button>
+
+          <!-- Quick Fill Button for testing requirements -->
+          <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed #334155; text-align: center;">
+            <span style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 8px;">系統預設管理員測試快捷鍵：</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="quick-admin-btn">👑 填入系統管理員 (0988229731)</button>
+          </div>
+        </form>
+
+        <!-- Register Form -->
+        <form id="form-register" style="display: none;">
+          <div class="alert alert-info">
+            ℹ️ 新會員註冊後，需經由系統管理員審核通過後方可登入對戰。
+          </div>
+          <div class="form-group">
+            <label>行動電話帳號（10碼）</label>
+            <input type="tel" class="form-control" id="reg-phone" placeholder="例如：0912345678" required maxlength="10">
+          </div>
+          <div class="form-group">
+            <label>西元生日8碼（即密碼）</label>
+            <input type="password" class="form-control" id="reg-birthday" placeholder="例如：19980612" required maxlength="8">
+            <div class="form-hint">此8碼生日將作為您的登入密碼</div>
+          </div>
+          <div class="form-group">
+            <label>訓練家暱稱（選填）</label>
+            <input type="text" class="form-control" id="reg-name" placeholder="例如：真新鎮小智">
+          </div>
+          <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 10px;">送出申請會員</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. SHARED DECKS VIEW (共同牌庫管理) -->
+    <section id="view-decks" class="view-section">
+      <div class="panel-container">
+        <div class="glass-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">🎴 系統共同牌庫（最多接受 5 組）</h2>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                會員可上傳自己的 60 張牌庫，系統自動辨識卡片內容並建置資料，對戰雙方皆可自由選用。
+              </p>
+            </div>
+            <button class="btn btn-accent" id="open-upload-modal-btn">📤 上傳/替換共同牌庫</button>
+          </div>
+
+          <!-- 5 Shared Decks Grid -->
+          <div class="decks-grid" id="decks-grid-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ADMIN REVIEW VIEW (管理員審核中心) -->
+    <section id="view-admin" class="view-section">
+      <div class="panel-container">
+        <div class="glass-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">👑 系統管理員審核中心</h2>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                當前登入管理員：0988229731。您擁有審核申請會員的權限。
+              </p>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="refresh-members-btn">🔄 重新整理</button>
+          </div>
+
+          <div id="admin-alert" style="display: none;"></div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>行動電話（帳號）</th>
+                <th>訓練家暱稱</th>
+                <th>西元生日（密碼）</th>
+                <th>申請時間</th>
+                <th>審核狀態</th>
+                <th>管理操作</th>
+              </tr>
+            </thead>
+            <tbody id="admin-members-tbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. MATCHMAKING VIEW (選擇牌組與對戰模式) -->
+    <section id="view-match" class="view-section">
+      <div class="panel-container">
+        <div class="match-setup-box glass-card">
+          <div class="section-header">
+            <h2 class="section-title">⚔️ 開始寶可夢卡牌對戰</h2>
+          </div>
+
+          <!-- Step 1: Mode Select -->
+          <h3 style="font-size: 1rem; margin-bottom: 12px; color: #e2e8f0;">步驟 1：選擇對戰模式</h3>
+          <div class="mode-selector">
+            <div class="mode-card selected" data-mode="pve">
+              <div class="mode-icon">🤖</div>
+              <div class="mode-name">對戰電腦 (AI)</div>
+              <div class="mode-desc">由電腦使用已建置的共同牌組與您進行完整標準對戰</div>
+            </div>
+            <div class="mode-card" data-mode="hotseat">
+              <div class="mode-icon">👥</div>
+              <div class="mode-name">雙人對戰 (同台輪流)</div>
+              <div class="mode-desc">與其他會員在同台設備上輪流對戰，具備手牌隱藏防偷看</div>
+            </div>
+          </div>
+
+          <!-- Step 2: Choose Your Deck -->
+          <h3 style="font-size: 1rem; margin-bottom: 12px; color: #e2e8f0;">步驟 2：選擇您的對戰牌組</h3>
+          <div class="form-group">
+            <select class="form-control" id="match-player-deck-select">
+              <!-- Populated by JS from 5 shared decks -->
+            </select>
+          </div>
+
+          <!-- Step 3: Choose Opponent Deck -->
+          <h3 style="font-size: 1rem; margin-bottom: 12px; color: #e2e8f0;">步驟 3：選擇對手使用的牌組</h3>
+          <div class="form-group">
+            <select class="form-control" id="match-opp-deck-select">
+              <!-- Populated by JS from 5 shared decks -->
+            </select>
+          </div>
+
+          <button class="btn btn-primary" id="start-game-btn" style="width: 100%; padding: 14px; font-size: 1.1rem; margin-top: 10px;">
+            ⚡ 進入對戰棋盤（開始對戰）
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. BATTLE BOARD VIEW (對戰棋盤 - 依照上傳圖片 S__12115980.jpg 佈局) -->
+    <section id="view-battle" class="view-section">
+      <div class="battle-container">
+        
+        <!-- Center Playmat Area -->
+        <div class="playmat-wrapper">
+          <div class="ptcg-playmat" id="ptcg-mat">
+            
+            <!-- White Center Pokéball Divider -->
+            <div class="mat-center-pokeball"></div>
+
+            <!-- OPPONENT FIELD (TOP HALF) -->
+            <div class="mat-player-half opponent-half">
+              <!-- Top-Left: 弃牌区 -->
+              <div class="mat-slot opp-discard-slot" id="opp-discard-zone">
+                <span class="mat-slot-label">弃牌区</span>
+                <div class="discard-card-view" id="opp-discard-content"></div>
+              </div>
+
+              <!-- Mid-Left: 牌库 -->
+              <div class="mat-slot opp-deck-slot" id="opp-deck-zone">
+                <span class="mat-slot-label">牌库</span>
+                <div class="ptcg-card ptcg-card-back" id="opp-deck-card">
+                  <span id="opp-deck-count" style="position: absolute; bottom: 6px; font-weight: bold; font-size: 0.8rem; color: #fff;">60</span>
+                </div>
+              </div>
+
+              <!-- Top-Center: 备战区 (5 Bench Slots) -->
+              <div class="opp-bench-row" id="opp-bench-row">
+                <!-- 5 Bench Slots -->
+                <div class="bench-card-slot" data-slot="0"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="1"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="2"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="3"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="4"><span class="mat-slot-label">备战区</span></div>
+              </div>
+
+              <!-- Center-Top: 战斗场 (Active) -->
+              <div class="mat-slot opp-active-slot" id="opp-active-zone">
+                <span class="mat-slot-label">战斗场</span>
+              </div>
+
+              <!-- Top-Right: 奖赏卡 (6 Prize Cards) -->
+              <div class="opp-prize-zone" id="opp-prize-zone">
+                <span class="mat-slot-label" style="top: -20px; font-size: 0.75rem;">奖赏卡</span>
+                <!-- 6 Prize Cards -->
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+              </div>
+            </div>
+
+            <!-- PLAYER FIELD (BOTTOM HALF) -->
+            <div class="mat-player-half player-half">
+              <!-- Bottom-Left: 奖赏卡 (6 Prize Cards) -->
+              <div class="player-prize-zone" id="player-prize-zone">
+                <span class="mat-slot-label" style="top: -20px; font-size: 0.75rem;">奖赏卡</span>
+                <!-- 6 Prize Cards -->
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+                <div class="ptcg-card ptcg-card-back prize-card"></div>
+              </div>
+
+              <!-- Center-Front: 战斗场 (Active) -->
+              <div class="mat-slot player-active-slot" id="player-active-zone">
+                <span class="mat-slot-label">战斗场</span>
+              </div>
+
+              <!-- Center-Back: 备战区 (5 Bench Slots) -->
+              <div class="player-bench-row" id="player-bench-row">
+                <div class="bench-card-slot" data-slot="0"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="1"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="2"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="3"><span class="mat-slot-label">备战区</span></div>
+                <div class="bench-card-slot" data-slot="4"><span class="mat-slot-label">备战区</span></div>
+              </div>
+
+              <!-- Mid-Right: 牌库 -->
+              <div class="mat-slot player-deck-slot" id="player-deck-zone">
+                <span class="mat-slot-label">牌库</span>
+                <div class="ptcg-card ptcg-card-back" id="player-deck-card">
+                  <span id="player-deck-count" style="position: absolute; bottom: 6px; font-weight: bold; font-size: 0.8rem; color: #fff;">60</span>
+                </div>
+              </div>
+
+              <!-- Bottom-Right: 弃牌区 -->
+              <div class="mat-slot player-discard-slot" id="player-discard-zone">
+                <span class="mat-slot-label">弃牌区</span>
+                <div class="discard-card-view" id="player-discard-content"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Docked Player Hand Strip at bottom -->
+          <div class="player-hand-dock" id="player-hand-dock">
+            <div class="player-hand-scroll" id="player-hand-container">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Battle Sidebar: Action Controls & Combat Log -->
+        <div class="battle-sidebar">
+          <div class="turn-indicator-box">
+            <div>
+              <div class="turn-number" id="battle-turn-label">第 1 回合</div>
+              <div class="active-player-name" id="battle-current-player-label">輪到：玩家回合</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="surrender-btn">離開對戰</button>
+          </div>
+
+          <div class="action-controls-panel">
+            <button class="btn btn-accent btn-sm" id="btn-action-attack">⚔️ 使出招式</button>
+            <button class="btn btn-primary btn-sm" id="btn-action-end-turn">⏭️ 結束回合</button>
+            <button class="btn btn-secondary btn-sm" id="btn-action-retreat">🏃 撤退寶可夢</button>
+            <button class="btn btn-secondary btn-sm" id="toggle-mat-bg-btn">🖼️ 切換實體照片墊</button>
+            <button class="btn btn-secondary btn-sm" id="btn-action-rules">📖 規則提示</button>
+          </div>
+
+          <div style="padding: 6px 14px; background: #1e293b; font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between;">
+            <span>即時對戰歷程</span>
+            <span id="log-count">0 條記錄</span>
+          </div>
+
+          <div class="combat-log-container" id="combat-log-box">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Deck Upload / Builder Modal -->
+  <div class="modal-overlay" id="deck-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📤 上傳與建置共同牌庫（60張規範）</h3>
+        <button class="modal-close" id="close-deck-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>存入共同牌庫槽位（上限 5 組）</label>
+          <select class="form-control" id="upload-slot-select">
+            <option value="1">槽位 1</option>
+            <option value="2">槽位 2</option>
+            <option value="3">槽位 3</option>
+            <option value="4">槽位 4</option>
+            <option value="5">槽位 5</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>牌組自訂名稱</label>
+          <input type="text" class="form-control" id="upload-deck-name" placeholder="例如：超強噴火龍ex狂暴牌組" required>
+        </div>
+
+        <div class="form-group">
+          <label>牌組說明 / 戰術簡介</label>
+          <input type="text" class="form-control" id="upload-deck-desc" placeholder="例如：快速進化大比鳥與噴火龍，爆發附能擊倒對手">
+        </div>
+
+        <div class="form-group">
+          <label>輸入卡牌清單（系統將自動辨識卡牌內容與屬性）</label>
+          <textarea class="form-control" id="upload-deck-text" rows="8" placeholder="每行一張卡牌，格式如：&#10;4 小火龍&#10;1 火恐龍&#10;3 噴火龍ex&#10;2 波波&#10;2 大比鳥ex&#10;4 博士的研究&#10;3 老大的指令&#10;1 至尊捕捉器&#10;8 基本火能量&#10;..."></textarea>
+          <div class="form-hint">
+            支援官方 PTCG 格式或簡易名稱（如「4 小火龍」、「噴火龍ex 3」），系統會智能辨識其 HP、屬性、招式及效果！
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck">🔍 智能辨識與規格驗證</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-template-charizard">📑 帶入經典噴火龍範例</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-template-pikachu">📑 帶入皮卡丘電光範例</button>
+        </div>
+
+        <!-- Real-time Rules Validation Box -->
+        <div class="validation-bar" id="deck-validation-box" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.95rem;">牌組規範驗證結果：</strong>
+            <span id="deck-validation-badge" class="status-badge">驗證中</span>
+          </div>
+          <ul class="validation-checklist" id="deck-validation-list">
+            <!-- Populated by JS -->
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-upload-btn">取消</button>
+        <button class="btn btn-success" id="confirm-upload-btn">確認儲存到共同牌庫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Action & Detail Popup -->
+  <div class="card-detail-popup" id="card-action-popup">
+    <div class="card-detail-card" id="card-action-content">
+      <!-- Populated dynamically by JS -->
+    </div>
+  </div>
+
+  <!-- Attack Choice Modal -->
+  <div class="card-detail-popup" id="attack-modal">
+    <div class="card-detail-card" style="max-width: 480px;">
+      <h3 style="font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 8px;">
+        ⚔️ 選擇攻擊招式
+      </h3>
+      <div id="attack-choices-list" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Populated by JS -->
+      </div>
+      <button class="btn btn-secondary" id="close-attack-modal-btn" style="margin-top: 10px;">取消</button>
+    </div>
+  </div>
+
+  <!-- Rules Cheat Sheet Modal -->
+  <div class="card-detail-popup" id="rules-modal">
+    <div class="card-detail-card" style="max-width: 580px; max-height: 85vh; overflow-y: auto;">
+      <h3 style="font-size: 1.2rem; font-weight: bold; border-bottom: 1px solid #334155; padding-bottom: 8px; color: #38bdf8;">
+        📖 寶可夢卡牌（PTCG）標準對戰規則指南
+      </h3>
+      <div style="font-size: 0.85rem; line-height: 1.6; color: #cbd5e1; display: flex; flex-direction: column; gap: 10px;">
+        <div>
+          <strong style="color: #ffcb05;">一、對戰準備：</strong>
+          <br>1. 雙方各使用 60 張牌的牌庫，洗牌後抽 7 張手牌。
+          <br>2. 覆蓋 1 隻「基礎寶可夢」在戰鬥區，備戰區最多放 5 隻。
+          <br>3. 從牌庫頂覆蓋 6 張牌作為「獎賞卡」。
+          <br>4. 翻開寶可夢，決定先攻與後攻。
+        </div>
+        <div>
+          <strong style="color: #ffcb05;">二、回合進行流程：</strong>
+          <br>1. <strong>抽牌</strong>：抽 1 張牌（先攻第一回合不能抽牌）。
+          <br>2. <strong>主要階段</strong>：
+          <br> • 放置基礎寶可夢至備戰區（上限 5 隻）。
+          <br> • 進化寶可夢（下場當回合與先攻第一回合不可進化）。
+          <br> • 附加能量卡（每回合限 1 次）。
+          <br> • 使用物品卡（不限次數）。
+          <br> • 附上寶可夢道具（每隻限貼 1 張）。
+          <br> • 使用支援者卡（每回合限 1 次，先攻第一回合不可使用）。
+          <br> • 撤退戰鬥寶可夢（每回合限 1 次，丟棄所需能量並與備戰交換）。
+          <br>3. <strong>攻擊階段</strong>：
+          <br> • 選擇招式攻擊（先攻第一回合不可攻擊）。傷害順序：基礎傷害 → 弱點(×2) → 抵抗力。
+          <br> • 攻擊後該回合立即結束！
+        </div>
+        <div>
+          <strong style="color: #ffcb05;">三、勝負條件：</strong>
+          <br>1. 拿完所有 6 張獎賞卡（普通寶可夢氣絕拿 1 張，寶可夢ex拿 2 張）。
+          <br>2. 對手場上（戰鬥區＋備戰區）沒有任何寶可夢可替換。
+          <br>3. 對手在自己回合開始時牌庫無牌可抽（抽牌失敗）。
+        </div>
+      </div>
+      <button class="btn btn-primary" id="close-rules-modal-btn" style="margin-top: 10px;">了解，關閉指南</button>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div class="card-detail-popup" id="game-over-modal">
+    <div class="card-detail-card" style="text-align: center; max-width: 440px;">
+      <div style="font-size: 3rem; margin-bottom: 6px;" id="game-over-icon">🏆</div>
+      <h2 style="font-size: 1.6rem; font-weight: 800; color: #ffcb05;" id="game-over-title">對戰勝利！</h2>
+      <p style="font-size: 0.95rem; color: #e2e8f0; line-height: 1.5; margin: 12px 0;" id="game-over-reason">
+        恭喜您拿完了所有獎賞卡！
+      </p>
+      <button class="btn btn-primary" id="game-over-back-btn" style="width: 100%;">返回大廳</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/standaloneEngine.js"></script>
+  <script src="js/cardAssets.js"></script>
+  <script src="js/deckBuilder.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/gameClient.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
