@@ -1,0 +1,435 @@
+[
+  {
+    "id": "deck_1",
+    "name": "惡太晶噴火龍ex 狂暴燃燒牌組",
+    "author": "系統預設",
+    "authorPhone": "0988229731",
+    "description": "經典雙重打手配置！由小火龍進化為噴火龍ex，擁有特性「煉獄支配」爆發附能，並由大比鳥ex「快速搜尋」精準檢索。",
+    "cardEntries": [
+      {
+        "name": "小火龍",
+        "count": 4
+      },
+      {
+        "name": "火恐龍",
+        "count": 1
+      },
+      {
+        "name": "噴火龍ex",
+        "count": 3
+      },
+      {
+        "name": "波波",
+        "count": 2
+      },
+      {
+        "name": "比比鳥",
+        "count": 1
+      },
+      {
+        "name": "大比鳥ex",
+        "count": 2
+      },
+      {
+        "name": "光輝甲賀忍蛙",
+        "count": 1
+      },
+      {
+        "name": "博士的研究",
+        "count": 4
+      },
+      {
+        "name": "老大的指令",
+        "count": 3
+      },
+      {
+        "name": "奇樹",
+        "count": 3
+      },
+      {
+        "name": "派帕",
+        "count": 4
+      },
+      {
+        "name": "巢穴球",
+        "count": 4
+      },
+      {
+        "name": "高級球",
+        "count": 4
+      },
+      {
+        "name": "神奇糖果",
+        "count": 4
+      },
+      {
+        "name": "寶可夢交替",
+        "count": 2
+      },
+      {
+        "name": "大地之器",
+        "count": 2
+      },
+      {
+        "name": "超級能量回收棒",
+        "count": 1
+      },
+      {
+        "name": "勇氣護符",
+        "count": 2
+      },
+      {
+        "name": "至尊捕捉器",
+        "count": 1
+      },
+      {
+        "name": "基本火能量",
+        "count": 8
+      },
+      {
+        "name": "基本惡能量",
+        "count": 4
+      }
+    ],
+    "slot": 1,
+    "totalCards": 60,
+    "valid": true,
+    "updatedAt": "2026-11-10T12:29:27.665Z"
+  },
+  {
+    "id": "deck_2",
+    "name": "密勒頓ex 迅雷極速牌組",
+    "author": "系統預設",
+    "authorPhone": "0988229731",
+    "description": "起手串聯驅動展開！迅速鋪出場上雷系基礎寶可夢，搭配鐵臂膀ex「感謝增幅」多拿獎賞卡，擊潰對手！",
+    "cardEntries": [
+      {
+        "name": "密勒頓ex",
+        "count": 3
+      },
+      {
+        "name": "鐵臂膀ex",
+        "count": 2
+      },
+      {
+        "name": "皮卡丘",
+        "count": 4
+      },
+      {
+        "name": "雷丘",
+        "count": 3
+      },
+      {
+        "name": "皮卡丘ex",
+        "count": 2
+      },
+      {
+        "name": "博士的研究",
+        "count": 4
+      },
+      {
+        "name": "老大的指令",
+        "count": 3
+      },
+      {
+        "name": "奇樹",
+        "count": 4
+      },
+      {
+        "name": "派帕",
+        "count": 2
+      },
+      {
+        "name": "巢穴球",
+        "count": 4
+      },
+      {
+        "name": "高級球",
+        "count": 4
+      },
+      {
+        "name": "寶可夢交替",
+        "count": 3
+      },
+      {
+        "name": "大地之器",
+        "count": 2
+      },
+      {
+        "name": "傷藥",
+        "count": 2
+      },
+      {
+        "name": "勇氣護符",
+        "count": 2
+      },
+      {
+        "name": "至尊捕捉器",
+        "count": 1
+      },
+      {
+        "name": "超級能量回收棒",
+        "count": 1
+      },
+      {
+        "name": "基本電能量",
+        "count": 14
+      }
+    ],
+    "slot": 2,
+    "totalCards": 60,
+    "valid": true,
+    "updatedAt": "2026-11-10T12:29:27.666Z"
+  },
+  {
+    "id": "deck_3",
+    "name": "古劍豹ex 冰霜十字水牌組",
+    "author": "系統預設",
+    "authorPhone": "0988229731",
+    "description": "水系無限充能！古劍豹ex抓水能量，戟脊龍「極低溫」單回合無限貼能，冰霜劍刃爆發單發破百傷害！",
+    "cardEntries": [
+      {
+        "name": "古劍豹ex",
+        "count": 3
+      },
+      {
+        "name": "涼脊龍",
+        "count": 4
+      },
+      {
+        "name": "凍脊龍",
+        "count": 1
+      },
+      {
+        "name": "戟脊龍",
+        "count": 3
+      },
+      {
+        "name": "光輝甲賀忍蛙",
+        "count": 1
+      },
+      {
+        "name": "博士的研究",
+        "count": 4
+      },
+      {
+        "name": "老大的指令",
+        "count": 3
+      },
+      {
+        "name": "奇樹",
+        "count": 3
+      },
+      {
+        "name": "派帕",
+        "count": 3
+      },
+      {
+        "name": "巢穴球",
+        "count": 4
+      },
+      {
+        "name": "高級球",
+        "count": 4
+      },
+      {
+        "name": "神奇糖果",
+        "count": 4
+      },
+      {
+        "name": "寶可夢交替",
+        "count": 3
+      },
+      {
+        "name": "超級能量回收棒",
+        "count": 2
+      },
+      {
+        "name": "大地之器",
+        "count": 2
+      },
+      {
+        "name": "至尊捕捉器",
+        "count": 1
+      },
+      {
+        "name": "基本水能量",
+        "count": 15
+      }
+    ],
+    "slot": 3,
+    "totalCards": 60,
+    "valid": true,
+    "updatedAt": "2026-11-10T12:29:27.666Z"
+  },
+  {
+    "id": "deck_4",
+    "name": "轟鳴月ex 古代暴走惡牌組",
+    "author": "系統預設",
+    "authorPhone": "0988229731",
+    "description": "古代悖謬的終極力量！「狂暴粉碎」直接強行氣絕任何巨大HP的防禦對手，配合災禍旋風強力進攻！",
+    "cardEntries": [
+      {
+        "name": "轟鳴月ex",
+        "count": 4
+      },
+      {
+        "name": "波波",
+        "count": 3
+      },
+      {
+        "name": "比比鳥",
+        "count": 1
+      },
+      {
+        "name": "大比鳥ex",
+        "count": 2
+      },
+      {
+        "name": "光輝甲賀忍蛙",
+        "count": 1
+      },
+      {
+        "name": "博士的研究",
+        "count": 4
+      },
+      {
+        "name": "老大的指令",
+        "count": 3
+      },
+      {
+        "name": "奇樹",
+        "count": 3
+      },
+      {
+        "name": "派帕",
+        "count": 3
+      },
+      {
+        "name": "巢穴球",
+        "count": 4
+      },
+      {
+        "name": "高級球",
+        "count": 4
+      },
+      {
+        "name": "神奇糖果",
+        "count": 3
+      },
+      {
+        "name": "大地之器",
+        "count": 3
+      },
+      {
+        "name": "寶可夢交替",
+        "count": 2
+      },
+      {
+        "name": "勇氣護符",
+        "count": 2
+      },
+      {
+        "name": "超級能量回收棒",
+        "count": 1
+      },
+      {
+        "name": "至尊捕捉器",
+        "count": 1
+      },
+      {
+        "name": "基本惡能量",
+        "count": 16
+      }
+    ],
+    "slot": 4,
+    "totalCards": 60,
+    "valid": true,
+    "updatedAt": "2026-11-10T12:29:27.667Z"
+  },
+  {
+    "id": "deck_5",
+    "name": "皮卡丘ex 頑強電光經典牌組",
+    "author": "系統預設",
+    "authorPhone": "0988229731",
+    "description": "電屬性高抗性強攻！皮卡丘ex特性「頑強韌性」死裡逃生，黃玉伏特單發高達300點傷害，毀滅級打擊！",
+    "cardEntries": [
+      {
+        "name": "皮卡丘ex",
+        "count": 3
+      },
+      {
+        "name": "皮卡丘",
+        "count": 4
+      },
+      {
+        "name": "雷丘",
+        "count": 3
+      },
+      {
+        "name": "密勒頓ex",
+        "count": 2
+      },
+      {
+        "name": "博士的研究",
+        "count": 4
+      },
+      {
+        "name": "老大的指令",
+        "count": 3
+      },
+      {
+        "name": "奇樹",
+        "count": 3
+      },
+      {
+        "name": "派帕",
+        "count": 3
+      },
+      {
+        "name": "巢穴球",
+        "count": 4
+      },
+      {
+        "name": "高級球",
+        "count": 4
+      },
+      {
+        "name": "寶可夢交替",
+        "count": 3
+      },
+      {
+        "name": "傷藥",
+        "count": 3
+      },
+      {
+        "name": "大地之器",
+        "count": 2
+      },
+      {
+        "name": "勇氣護符",
+        "count": 2
+      },
+      {
+        "name": "至尊捕捉器",
+        "count": 1
+      },
+      {
+        "name": "基本電能量",
+        "count": 12
+      },
+      {
+        "name": "基本草能量",
+        "count": 2
+      },
+      {
+        "name": "基本鋼能量",
+        "count": 2
+      }
+    ],
+    "slot": 5,
+    "totalCards": 60,
+    "valid": true,
+    "updatedAt": "2026-11-10T12:29:27.667Z"
+  }
+]

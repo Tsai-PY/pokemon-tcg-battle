@@ -1,0 +1,20 @@
+[
+  {
+    "phone": "0988229731",
+    "birthday": "19710607",
+    "name": "系統管理員",
+    "role": "admin",
+    "status": "approved",
+    "createdAt": "2026-11-10T12:29:27.620Z",
+    "approvedAt": "2026-11-10T12:29:27.631Z"
+  },
+  {
+    "phone": "0912345678",
+    "birthday": "19950520",
+    "name": "測試訓練家小明",
+    "role": "member",
+    "status": "approved",
+    "createdAt": "2026-11-10T12:29:27.648Z",
+    "approvedAt": "2026-11-10T12:29:27.656Z"
+  }
+]
