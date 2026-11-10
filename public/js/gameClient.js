@@ -596,11 +596,234 @@ document.addEventListener('DOMContentLoaded', () => {
     switchView('view-decks');
   });
 
-  // Mode Selection Cards
+  // Mode Selection Cards & Online Room Handlers
+let currentHostedRoomCode = null;
+let roomWaitPollingTimer = null;
+
+async function createOnlineRoom() {
+  const token = localStorage.getItem('ptcg_token');
+  const deckSlot = parseInt(document.getElementById('match-player-deck-select').value, 10) || 1;
+  const btn = document.getElementById('btn-do-create-room');
+  const infoBox = document.getElementById('room-created-info');
+  const displayCode = document.getElementById('display-room-code');
+  const qrImg = document.getElementById('room-qr-img');
+
+  btn.disabled = true;
+  btn.textContent = '建立房間中...';
+
+  try {
+    const res = await fetch('/api/rooms/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ deckSlot })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      alert('建立房間失敗：' + data.message);
+      btn.disabled = false;
+      btn.textContent = '⚡ 建立對戰房間並產生代號與 QR 碼';
+      return;
+    }
+
+    currentHostedRoomCode = data.roomCode;
+    displayCode.textContent = data.roomCode;
+
+    // Direct Join Link (works on same wifi / internet)
+    const joinUrl = `${window.location.origin}${window.location.pathname}?room=${data.roomCode}`;
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(joinUrl)}`;
+
+    infoBox.style.display = 'block';
+    btn.style.display = 'none';
+
+    // Connect WebSocket to wait
+    initRoomWait(data.roomCode);
+  } catch (err) {
+    console.error('createOnlineRoom error:', err);
+    alert('建立房間發生錯誤');
+    btn.disabled = false;
+    btn.textContent = '⚡ 建立對戰房間並產生代號與 QR 碼';
+  }
+}
+
+function initRoomWait(roomCode) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: 'wait_room', roomCode }));
+  }
+
+  // Also poll /api/rooms/status/:code as fallback
+  if (roomWaitPollingTimer) clearInterval(roomWaitPollingTimer);
+  roomWaitPollingTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/rooms/status/${roomCode}`);
+      const data = await res.json();
+      if (data.success && data.status === 'playing' && data.gameId) {
+        clearInterval(roomWaitPollingTimer);
+        roomWaitPollingTimer = null;
+        onRoomGameStart(data.gameId, 0); // Host is Player 1
+      }
+    } catch (e) {}
+  }, 1500);
+}
+
+async function joinOnlineRoom(codeToJoin = null) {
+  const token = localStorage.getItem('ptcg_token');
+  const roomCode = String(codeToJoin || document.getElementById('input-join-room-code').value || '').trim();
+  const deckSlot = parseInt(document.getElementById('match-player-deck-select').value, 10) || 1;
+
+  if (!roomCode) {
+    alert('請輸入 4 位數房間代號！');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/rooms/join', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ roomCode, deckSlot })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      alert('無法加入房間：\n' + data.message);
+      return;
+    }
+
+    onRoomGameStart(data.gameId, 1, data.state); // Client is Player 2
+  } catch (err) {
+    console.error('joinOnlineRoom error:', err);
+    alert('加入房間發生錯誤，請稍後再試！');
+  }
+}
+
+async function loadOpenRoomsList() {
+  const listEl = document.getElementById('open-rooms-list');
+  if (!listEl) return;
+
+  try {
+    const res = await fetch('/api/rooms');
+    const data = await res.json();
+    if (!data.success) return;
+
+    listEl.innerHTML = '';
+    if (!data.rooms || data.rooms.length === 0) {
+      listEl.innerHTML = '<span style="font-size: 0.8rem; color: #64748b;">目前尚無等待中的房間，請在上方輸入代號或建立新房間。</span>';
+      return;
+    }
+
+    data.rooms.forEach(r => {
+      const item = document.createElement('div');
+      item.style.display = 'flex';
+      item.style.justifyContent = 'space-between';
+      item.style.alignItems = 'center';
+      item.style.padding = '8px 12px';
+      item.style.background = '#1e293b';
+      item.style.borderRadius = '6px';
+      item.style.border = '1px solid #334155';
+
+      item.innerHTML = `
+        <div>
+          <strong style="color: #ffcb05;">房間 #${r.roomCode}</strong>
+          <span style="font-size: 0.8rem; color: #94a3b8; margin-left: 8px;">房主：${r.hostName}</span>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="joinOnlineRoom('${r.roomCode}')">加入對戰</button>
+      `;
+      listEl.appendChild(item);
+    });
+  } catch (e) {}
+}
+
+function onRoomGameStart(gameId, playerIndex, initialState = null) {
+  if (roomWaitPollingTimer) {
+    clearInterval(roomWaitPollingTimer);
+    roomWaitPollingTimer = null;
+  }
+
+  currentGameId = gameId;
+  currentPlayerIndex = playerIndex;
+  currentGameState = initialState;
+
+  switchView('view-battle');
+  initGameWebSocket(currentGameId);
+
+  if (initialState) {
+    renderGameState(initialState);
+  } else {
+    // Fetch initial state
+    fetch(`/api/games/${gameId}`)
+      .then(res => res.json())
+      .then(d => {
+        if (d.success) {
+          currentGameState = d.state;
+          renderGameState(d.state);
+        }
+      });
+  }
+
+  sfx.playFanfare();
+}
+
+  // Hook up mode selector and online room buttons
   document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', () => {
       document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
+      const mode = card.getAttribute('data-mode');
+      const onlineSec = document.getElementById('online-room-section');
+      const pveGroup = document.getElementById('pve-opp-deck-group');
+
+      if (mode === 'online') {
+        if (onlineSec) onlineSec.style.display = 'block';
+        if (pveGroup) pveGroup.style.display = 'none';
+        loadOpenRoomsList();
+      } else {
+        if (onlineSec) onlineSec.style.display = 'none';
+        if (pveGroup) pveGroup.style.display = 'block';
+      }
     });
   });
+
+  const tabCreate = document.getElementById('btn-tab-create-room');
+  const tabJoin = document.getElementById('btn-tab-join-room');
+  const boxCreate = document.getElementById('box-create-room');
+  const boxJoin = document.getElementById('box-join-room');
+
+  if (tabCreate && tabJoin) {
+    tabCreate.addEventListener('click', () => {
+      tabCreate.className = 'btn btn-primary btn-sm';
+      tabJoin.className = 'btn btn-secondary btn-sm';
+      boxCreate.style.display = 'block';
+      boxJoin.style.display = 'none';
+    });
+    tabJoin.addEventListener('click', () => {
+      tabJoin.className = 'btn btn-primary btn-sm';
+      tabCreate.className = 'btn btn-secondary btn-sm';
+      boxCreate.style.display = 'none';
+      boxJoin.style.display = 'block';
+      loadOpenRoomsList();
+    });
+  }
+
+  const btnDoCreate = document.getElementById('btn-do-create-room');
+  if (btnDoCreate) btnDoCreate.addEventListener('click', createOnlineRoom);
+
+  const btnDoJoin = document.getElementById('btn-do-join-room');
+  if (btnDoJoin) btnDoJoin.addEventListener('click', () => joinOnlineRoom());
+
+  // Check URL params e.g. ?room=5832
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramRoom = urlParams.get('room');
+  if (paramRoom) {
+    const onlineCard = document.querySelector('.mode-card[data-mode="online"]');
+    if (onlineCard) onlineCard.click();
+    if (tabJoin) tabJoin.click();
+    const inputCode = document.getElementById('input-join-room-code');
+    if (inputCode) inputCode.value = paramRoom;
+  }
 });

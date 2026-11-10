@@ -898,6 +898,49 @@
       return new Response(JSON.stringify({ success: res.success, message: res.message, state: g.getState() }), { status: res.success ? 200 : 400 });
     }
 
+    // Route 12: Online Rooms (Standalone fallback)
+    if (url === '/api/rooms/create' && method === 'POST') {
+      const roomCode = String(Math.floor(1000 + Math.random() * 9000));
+      const rooms = JSON.parse(localStorage.getItem('ptcg_standalone_rooms') || '[]');
+      const r = { roomCode, hostDeckSlot: body.deckSlot || 1, status: 'waiting', createdAt: Date.now() };
+      rooms.push(r);
+      localStorage.setItem('ptcg_standalone_rooms', JSON.stringify(rooms));
+      return new Response(JSON.stringify({ success: true, roomCode, message: '房間已建立' }), { status: 200 });
+    }
+
+    if (url === '/api/rooms' && method === 'GET') {
+      const rooms = JSON.parse(localStorage.getItem('ptcg_standalone_rooms') || '[]');
+      return new Response(JSON.stringify({ success: true, rooms: rooms.filter(x => x.status === 'waiting') }), { status: 200 });
+    }
+
+    if (url === '/api/rooms/join' && method === 'POST') {
+      const roomCode = String(body.roomCode || '').trim();
+      const rooms = JSON.parse(localStorage.getItem('ptcg_standalone_rooms') || '[]');
+      const r = rooms.find(x => x.roomCode === roomCode);
+      const decks = getLocalDecks();
+      const d1 = decks.find(d => d.slot === (r ? r.hostDeckSlot : 1)) || decks[0];
+      const d2 = decks.find(d => d.slot === (body.deckSlot || 2)) || decks[1];
+      const gameId = `local_room_${roomCode}_${Date.now()}`;
+      const g = new StandaloneGame(gameId, d1, d2, false);
+      localActiveGames.set(gameId, g);
+      if (r) {
+        r.status = 'playing';
+        r.gameId = gameId;
+        localStorage.setItem('ptcg_standalone_rooms', JSON.stringify(rooms));
+      }
+      return new Response(JSON.stringify({ success: true, gameId, playerIndex: 1, state: g.getState() }), { status: 200 });
+    }
+
+    if (url.startsWith('/api/rooms/status/') && method === 'GET') {
+      const code = url.split('/')[4];
+      const rooms = JSON.parse(localStorage.getItem('ptcg_standalone_rooms') || '[]');
+      const r = rooms.find(x => x.roomCode === code);
+      if (r && r.status === 'playing') {
+        return new Response(JSON.stringify({ success: true, status: 'playing', gameId: r.gameId, playerIndex: 0 }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ success: true, status: 'waiting' }), { status: 200 });
+    }
+
     return originalFetch.apply(this, arguments);
   };
 })();

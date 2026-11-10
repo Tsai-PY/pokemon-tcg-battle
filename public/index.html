@@ -158,16 +158,21 @@
 
           <!-- Step 1: Mode Select -->
           <h3 style="font-size: 1rem; margin-bottom: 12px; color: #e2e8f0;">步驟 1：選擇對戰模式</h3>
-          <div class="mode-selector">
+          <div class="mode-selector" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
             <div class="mode-card selected" data-mode="pve">
               <div class="mode-icon">🤖</div>
               <div class="mode-name">對戰電腦 (AI)</div>
-              <div class="mode-desc">由電腦使用已建置的共同牌組與您進行完整標準對戰</div>
+              <div class="mode-desc">由電腦使用共同牌組進行完整標準對戰</div>
+            </div>
+            <div class="mode-card" data-mode="online">
+              <div class="mode-icon">🌐</div>
+              <div class="mode-name">跨裝置網路對戰 (筆電 vs iPad)</div>
+              <div class="mode-desc">兩台設備透過房間代號或 QR 碼進行網路對戰</div>
             </div>
             <div class="mode-card" data-mode="hotseat">
               <div class="mode-icon">👥</div>
               <div class="mode-name">雙人對戰 (同台輪流)</div>
-              <div class="mode-desc">與其他會員在同台設備上輪流對戰，具備手牌隱藏防偷看</div>
+              <div class="mode-desc">同台設備輪流對戰，具備手牌隱藏防偷看</div>
             </div>
           </div>
 
@@ -179,17 +184,62 @@
             </select>
           </div>
 
-          <!-- Step 3: Choose Opponent Deck -->
-          <h3 style="font-size: 1rem; margin-bottom: 12px; color: #e2e8f0;">步驟 3：選擇對手使用的牌組</h3>
-          <div class="form-group">
-            <select class="form-control" id="match-opp-deck-select">
-              <!-- Populated by JS from 5 shared decks -->
-            </select>
+          <!-- Step 3: Online Room Panel (Shows only when online mode is active) -->
+          <div id="online-room-section" style="display: none; background: #0f172a; padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #334155;">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-tab-create-room">🏠 我要開房（筆電房主）</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-tab-join-room">📱 加入房間（iPad 或對手）</button>
+            </div>
+
+            <!-- Host Room Box -->
+            <div id="box-create-room">
+              <button type="button" class="btn btn-accent" id="btn-do-create-room" style="width: 100%;">
+                ⚡ 建立對戰房間並產生代號與 QR 碼
+              </button>
+              <div id="room-created-info" style="display: none; margin-top: 14px; text-align: center; padding: 12px; background: rgba(56, 189, 248, 0.1); border: 1px dashed #38bdf8; border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: #94a3b8;">請將以下 4 位數代號告訴 iPad 玩家：</div>
+                <div style="font-size: 2.4rem; font-weight: 900; color: #ffcb05; letter-spacing: 4px; margin: 4px 0;" id="display-room-code">----</div>
+                <div style="font-size: 0.8rem; color: #cbd5e1; margin-bottom: 8px;">或請用 iPad 相機掃描加入對戰：</div>
+                <div id="room-qr-container" style="display: flex; justify-content: center; margin: 8px 0;">
+                  <img id="room-qr-img" src="" alt="Room QR Code" style="width: 140px; height: 140px; background: #fff; padding: 6px; border-radius: 8px;">
+                </div>
+                <div style="font-size: 0.85rem; color: #34d399; font-weight: bold; animation: pulse 1s infinite alternate;">
+                  ⏳ 等待 iPad 對手加入中...（加入後將自動進入棋盤）
+                </div>
+              </div>
+            </div>
+
+            <!-- Join Room Box -->
+            <div id="box-join-room" style="display: none;">
+              <div class="form-group">
+                <label>輸入對戰房間 4 碼代號：</label>
+                <input type="text" class="form-control" id="input-join-room-code" placeholder="例如：5820" maxlength="6" style="font-size: 1.2rem; letter-spacing: 2px; text-align: center;">
+              </div>
+              <button type="button" class="btn btn-success" id="btn-do-join-room" style="width: 100%;">
+                🔗 加入此房間對戰
+              </button>
+
+              <div style="margin-top: 16px;">
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px;">目前等待中的線上房間：</div>
+                <div id="open-rooms-list" style="display: flex; flex-direction: column; gap: 6px;">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
           </div>
 
-          <button class="btn btn-primary" id="start-game-btn" style="width: 100%; padding: 14px; font-size: 1.1rem; margin-top: 10px;">
-            ⚡ 進入對戰棋盤（開始對戰）
-          </button>
+          <!-- Step 4: Choose Opponent Deck (for PvE or Hotseat only) -->
+          <div id="pve-opp-deck-group">
+            <h3 style="font-size: 1rem; margin-bottom: 12px; color: #e2e8f0;">步驟 3：選擇對手使用的牌組</h3>
+            <div class="form-group">
+              <select class="form-control" id="match-opp-deck-select">
+                <!-- Populated by JS from 5 shared decks -->
+              </select>
+            </div>
+            <button class="btn btn-primary" id="start-game-btn" style="width: 100%; padding: 14px; font-size: 1.1rem; margin-top: 10px;">
+              ⚡ 進入對戰棋盤（開始對戰）
+            </button>
+          </div>
         </div>
       </div>
     </section>

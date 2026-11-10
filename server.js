@@ -17,8 +17,9 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 auth.initUsersDb();
 initSharedDecks();
 
-// In-memory games store
+// In-memory games and rooms store
 const activeGames = new Map();
+const activeRooms = new Map(); // roomCode -> { roomCode, gameId, hostUser, hostDeckSlot, clientUser, clientDeckSlot, status: 'waiting' | 'playing' }
 
 // MIME Types
 const MIME_TYPES = {
@@ -182,6 +183,114 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { success: true, cards: cardDb.CARD_DATABASE });
   }
 
+  // 8.1 Rooms: Create Online Room (for Laptop vs iPad)
+  if (pathname === '/api/rooms/create' && method === 'POST') {
+    const token = extractToken(req);
+    const user = auth.verifyToken(token);
+    if (!user) return sendJson(res, 401, { success: false, message: '請先登入！' });
+
+    const body = await parseRequestBody(req);
+    const roomCode = String(Math.floor(1000 + Math.random() * 9000));
+    const deckSlot = parseInt(body.deckSlot, 10) || 1;
+
+    activeRooms.set(roomCode, {
+      roomCode,
+      gameId: null,
+      hostUser: user,
+      hostDeckSlot: deckSlot,
+      clientUser: null,
+      clientDeckSlot: null,
+      status: 'waiting',
+      createdAt: Date.now()
+    });
+
+    return sendJson(res, 200, { success: true, roomCode, message: '房間建立成功，等待對手加入！' });
+  }
+
+  // 8.2 Rooms: List Open Rooms
+  if (pathname === '/api/rooms' && method === 'GET') {
+    const rooms = [];
+    for (const [code, r] of activeRooms.entries()) {
+      if (r.status === 'waiting') {
+        rooms.push({
+          roomCode: r.roomCode,
+          hostName: r.hostUser.name || r.hostUser.phone,
+          hostPhone: r.hostUser.phone,
+          hostDeckSlot: r.hostDeckSlot,
+          createdAt: r.createdAt
+        });
+      }
+    }
+    return sendJson(res, 200, { success: true, rooms });
+  }
+
+  // 8.3 Rooms: Join Online Room
+  if (pathname === '/api/rooms/join' && method === 'POST') {
+    const token = extractToken(req);
+    const user = auth.verifyToken(token);
+    if (!user) return sendJson(res, 401, { success: false, message: '請先登入！' });
+
+    const body = await parseRequestBody(req);
+    const roomCode = String(body.roomCode || '').trim();
+    const room = activeRooms.get(roomCode);
+
+    if (!room) return sendJson(res, 404, { success: false, message: '找不到此房間代號，請確認輸入是否正確！' });
+    if (room.status !== 'waiting') return sendJson(res, 400, { success: false, message: '此房間已在對戰中或已結束！' });
+
+    room.clientUser = user;
+    room.clientDeckSlot = parseInt(body.deckSlot, 10) || 2;
+    room.status = 'playing';
+
+    // Start PTCG Game with Host (P1) vs Client (P2)
+    const decks = getSharedDecks();
+    const deck1 = decks.find(d => d.slot === room.hostDeckSlot) || decks[0];
+    const deck2 = decks.find(d => d.slot === room.clientDeckSlot) || decks[1] || decks[0];
+
+    const gameId = `room_game_${roomCode}_${Date.now()}`;
+    room.gameId = gameId;
+
+    const p1Config = {
+      id: room.hostUser.phone,
+      name: room.hostUser.name || room.hostUser.phone,
+      isAi: false,
+      deck: deck1
+    };
+
+    const p2Config = {
+      id: room.clientUser.phone,
+      name: room.clientUser.name || room.clientUser.phone,
+      isAi: false,
+      deck: deck2
+    };
+
+    const game = new PTCGGame(gameId, p1Config, p2Config);
+    game.startSetup();
+    activeGames.set(gameId, game);
+
+    // Notify any waiting websocket
+    broadcastRoomUpdate(roomCode, { type: 'game_start', gameId, roomCode });
+
+    return sendJson(res, 200, {
+      success: true,
+      gameId,
+      playerIndex: 1, // Client is Player 2
+      state: game.getState(1)
+    });
+  }
+
+  // 8.4 Rooms: Check Status (Polling fallback for Host)
+  if (pathname.startsWith('/api/rooms/status/') && method === 'GET') {
+    const code = pathname.split('/')[4];
+    const room = activeRooms.get(code);
+    if (!room) return sendJson(res, 404, { success: false, message: '找不到房間' });
+    return sendJson(res, 200, {
+      success: true,
+      status: room.status,
+      gameId: room.gameId,
+      playerIndex: 0 // Host is Player 1
+    });
+  }
+
   // 9. Games: Create Game
   if (pathname === '/api/games/create' && method === 'POST') {
     const token = extractToken(req);
@@ -324,17 +433,40 @@ const server = http.createServer(async (req, res) => {
 // Setup WebSocket Server
 const wss = new SimpleWebSocketServer({ server });
 const roomClients = new Map(); // gameId -> Set of ws
+const waitingRoomClients = new Map(); // roomCode -> Set of ws
+
+function broadcastRoomUpdate(roomCode, data) {
+  const clients = waitingRoomClients.get(roomCode);
+  if (!clients) return;
+  const msg = JSON.stringify(data);
+  for (const client of clients) {
+    if (client.readyState === 1) client.send(msg);
+  }
+}
 
 wss.on('connection', (ws) => {
   let currentGameId = null;
+  let currentRoomCode = null;
 
   ws.on('message', (msgStr) => {
     try {
       const data = JSON.parse(msgStr);
-      const { type, gameId, playerIndex, payload } = data;
+      const { type, gameId, roomCode, playerIndex, payload } = data;
+
+      if (type === 'wait_room') {
+        currentRoomCode = roomCode;
+        if (!waitingRoomClients.has(roomCode)) {
+          waitingRoomClients.set(roomCode, new Set());
+        }
+        waitingRoomClients.get(roomCode).add(ws);
+        return;
+      }
 
       if (type === 'join') {
         currentGameId = gameId;
+        ws.playerIndex = typeof playerIndex === 'number' ? playerIndex : 0;
+        ws.gameId = gameId;
+
         if (!roomClients.has(gameId)) {
           roomClients.set(gameId, new Set());
         }
@@ -342,14 +474,18 @@ wss.on('connection', (ws) => {
 
         const game = activeGames.get(gameId);
         if (game) {
-          ws.send(JSON.stringify({ type: 'state', state: game.getState() }));
+          ws.send(JSON.stringify({
+            type: 'state',
+            playerIndex: ws.playerIndex,
+            state: game.getState(ws.playerIndex)
+          }));
         }
         return;
       }
 
       if (currentGameId && activeGames.has(currentGameId)) {
         const game = activeGames.get(currentGameId);
-        const pIdx = typeof playerIndex === 'number' ? playerIndex : game.activePlayerIndex;
+        const pIdx = typeof ws.playerIndex === 'number' ? ws.playerIndex : (typeof playerIndex === 'number' ? playerIndex : game.activePlayerIndex);
         let actionRes = { success: false, message: '未知操作' };
 
         switch (type) {
@@ -406,24 +542,48 @@ wss.on('connection', (ws) => {
     if (currentGameId && roomClients.has(currentGameId)) {
       roomClients.get(currentGameId).delete(ws);
     }
+    if (currentRoomCode && waitingRoomClients.has(currentRoomCode)) {
+      waitingRoomClients.get(currentRoomCode).delete(ws);
+    }
   });
 });
 
 function broadcastGameState(game) {
   const clients = roomClients.get(game.id);
   if (!clients) return;
-  const stateJson = JSON.stringify({ type: 'state', state: game.getState() });
   for (const client of clients) {
     if (client.readyState === 1) {
-      client.send(stateJson);
+      const pIdx = typeof client.playerIndex === 'number' ? client.playerIndex : null;
+      client.send(JSON.stringify({
+        type: 'state',
+        playerIndex: pIdx,
+        state: game.getState(pIdx)
+      }));
     }
   }
 }
 
-server.listen(PORT, () => {
+function getLocalIp() {
+  const os = require('os');
+  const interfaces = os.networkInterfaces();
+  for (const devName in interfaces) {
+    const iface = interfaces[devName];
+    for (let i = 0; i < iface.length; i++) {
+      const alias = iface[i];
+      if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+        return alias.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+server.listen(PORT, '0.0.0.0', () => {
+  const localIp = getLocalIp();
   console.log(`====================================================`);
   console.log(`⚡ 寶可夢紙牌（PTCG）對戰系統伺服器已啟動！`);
-  console.log(`🌐 本地網址: http://localhost:${PORT}`);
+  console.log(`💻 筆記型電腦 (本機): http://localhost:${PORT}`);
+  console.log(`📱 iPad / 手機 (區網連線): http://${localIp}:${PORT}`);
   console.log(`👑 預設管理員帳號: 0988229731 / 密碼: 19710607`);
   console.log(`====================================================`);
 });
