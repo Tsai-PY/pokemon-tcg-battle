@@ -1,5 +1,8 @@
 # 寶可夢紙牌（PTCG）官方對戰系統
 
+> 🌐 **線上正式遊玩網址 (GitHub Pages)**: [https://tsai-py.github.io/pokemon-tcg-battle/](https://tsai-py.github.io/pokemon-tcg-battle/)  
+> 📦 **GitHub 專案開源倉庫**: [https://github.com/Tsai-PY/pokemon-tcg-battle](https://github.com/Tsai-PY/pokemon-tcg-battle)
+
 本系統為依據官方寶可夢集換式卡牌遊戲（Pokémon TCG）標準規則開發之全功能雙人／人機對戰網頁系統，具備完整的會員登錄審核、共同牌庫管理（最多 5 組）、卡牌內容智能辨識建置、60張卡牌規範驗證，以及高規格還原實體對戰墊佈局的對戰棋盤。
 
 ---
