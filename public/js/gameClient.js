@@ -93,8 +93,47 @@ function initGameWebSocket(gameId) {
   }
 }
 
-// Send Action to Engine (WS with REST fallback)
+// P2P State for direct Internet Cross-Device Battle (Laptop <-> iPad)
+let p2pPeer = null;
+let p2pConnection = null;
+let isP2PHost = false;
+let p2pGame = null;
+
+function executeP2PAction(g, pIdx, actionType, payload) {
+  let res = { success: false, message: '未知操作' };
+  if (actionType === 'bench') res = g.playBasic(pIdx, payload.cardInstanceId);
+  else if (actionType === 'attach_energy') res = g.attachEnergy(pIdx, payload.cardInstanceId, payload.targetSlot);
+  else if (actionType === 'evolve') res = g.evolve(pIdx, payload.cardInstanceId, payload.targetSlot);
+  else if (actionType === 'play_item') res = g.playItem(pIdx, payload.cardInstanceId);
+  else if (actionType === 'play_supporter') res = g.playSupporter(pIdx, payload.cardInstanceId);
+  else if (actionType === 'retreat') res = g.retreat(pIdx, payload.benchIndex);
+  else if (actionType === 'attack') res = g.attack(pIdx, payload.attackIndex || 0);
+  else if (actionType === 'end_turn') { g.nextTurn(); res = { success: true }; }
+  return res;
+}
+
+// Send Action to Engine (P2P WebRTC, WS, or REST)
 async function sendGameAction(actionType, payload = {}) {
+  // 1. P2P WebRTC Mode (Cross-Device Internet play)
+  if (p2pConnection && p2pConnection.open) {
+    if (isP2PHost && p2pGame) {
+      executeP2PAction(p2pGame, 0, actionType, payload);
+      const hostState = p2pGame.getState(0);
+      const guestState = p2pGame.getState(1);
+      p2pConnection.send({ type: 'state', state: guestState });
+      currentGameState = hostState;
+      renderGameState(hostState);
+    } else {
+      p2pConnection.send({
+        type: 'action',
+        actionType,
+        payload
+      });
+    }
+    return;
+  }
+
+  // 2. WebSocket Mode
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
       type: actionType,
@@ -105,7 +144,7 @@ async function sendGameAction(actionType, payload = {}) {
     return;
   }
 
-  // Fallback to REST
+  // 3. Fallback to REST
   try {
     const res = await fetch(`/api/games/${currentGameId}/action`, {
       method: 'POST',
@@ -159,14 +198,14 @@ function renderGameState(state) {
   }
 
   // 1. OPPONENT FIELD (TOP)
-  // Top-Left: 弃牌区
+  // Top-Left: 棄牌區
   const oppDiscardContent = document.getElementById('opp-discard-content');
   if (oppDiscardContent) {
     const oppLastDiscard = opponent.discard && opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
     oppDiscardContent.innerHTML = oppLastDiscard ? renderCardHtml(oppLastDiscard) : '';
   }
 
-  // Mid-Left: 牌库
+  // Mid-Left: 牌庫
   const oppDeckCount = document.getElementById('opp-deck-count');
   if (oppDeckCount) oppDeckCount.textContent = opponent.deckCount;
 
@@ -239,11 +278,11 @@ function renderGameState(state) {
     });
   }
 
-  // Mid-Right: 牌库
+  // Mid-Right: 牌庫
   const playerDeckCount = document.getElementById('player-deck-count');
   if (playerDeckCount) playerDeckCount.textContent = player.deckCount;
 
-  // Bottom-Right: 弃牌区
+  // Bottom-Right: 棄牌區
   const playerDiscardContent = document.getElementById('player-discard-content');
   if (playerDiscardContent) {
     const playerLastDiscard = player.discard && player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
@@ -616,40 +655,117 @@ async function createOnlineRoom() {
   btn.textContent = '建立房間中...';
 
   try {
-    const res = await fetch('/api/rooms/create', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ deckSlot })
-    });
-    const data = await res.json();
+    let roomCode = String(Math.floor(1000 + Math.random() * 9000));
 
-    if (!data.success) {
-      alert('建立房間失敗：' + data.message);
-      btn.disabled = false;
-      btn.textContent = '⚡ 建立對戰房間並產生代號與 QR 碼';
-      return;
+    try {
+      const res = await fetch('/api/rooms/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ deckSlot })
+      });
+      const data = await res.json();
+      if (data && data.success && data.roomCode) {
+        roomCode = data.roomCode;
+      }
+    } catch (e) {
+      console.warn('Backend room create fallback, using local roomCode:', roomCode);
     }
 
-    currentHostedRoomCode = data.roomCode;
-    displayCode.textContent = data.roomCode;
+    currentHostedRoomCode = roomCode;
+    displayCode.textContent = roomCode;
 
     // Direct Join Link (works on same wifi / internet)
-    const joinUrl = `${window.location.origin}${window.location.pathname}?room=${data.roomCode}`;
+    const joinUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
     qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(joinUrl)}`;
 
     infoBox.style.display = 'block';
     btn.style.display = 'none';
 
-    // Connect WebSocket to wait
-    initRoomWait(data.roomCode);
+    // 1. Initialize WebRTC P2P Host (PeerJS) for cross-device Internet play
+    initP2PHost(roomCode, deckSlot);
+
+    // 2. Connect WebSocket / polling to wait (for local backend server)
+    initRoomWait(roomCode);
   } catch (err) {
     console.error('createOnlineRoom error:', err);
-    alert('建立房間發生錯誤');
+    alert('建立房間發生錯誤，請稍後再試！');
     btn.disabled = false;
     btn.textContent = '⚡ 建立對戰房間並產生代號與 QR 碼';
+  }
+}
+
+function initP2PHost(roomCode, hostDeckSlot) {
+  if (typeof Peer === 'undefined') {
+    console.warn('PeerJS library not loaded');
+    return;
+  }
+  try {
+    if (p2pPeer) {
+      try { p2pPeer.destroy(); } catch (e) {}
+    }
+    const peerId = `ptcg-room-${roomCode}`;
+    p2pPeer = new Peer(peerId, {
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+
+    p2pPeer.on('open', (id) => {
+      console.log('PeerJS P2P Host opened successfully with ID:', id);
+    });
+
+    p2pPeer.on('connection', (conn) => {
+      console.log('Opponent connected to P2P Host:', conn.peer);
+      p2pConnection = conn;
+      isP2PHost = true;
+
+      conn.on('data', (data) => {
+        console.log('Host received P2P data:', data);
+        if (data.type === 'guest_join') {
+          // Initialize battle engine on host
+          const guestDeckSlot = data.deckSlot || 2;
+          const decks = window.getLocalDecks ? window.getLocalDecks() : [];
+          const d1 = decks.find(d => d.slot === hostDeckSlot) || decks[0];
+          const d2 = decks.find(d => d.slot === guestDeckSlot) || decks[1];
+          const gameId = `p2p_room_${roomCode}_${Date.now()}`;
+
+          p2pGame = new window.StandaloneGame(gameId, d1, d2, false);
+
+          // Send game_start to Guest
+          conn.send({
+            type: 'game_start',
+            gameId,
+            playerIndex: 1,
+            state: p2pGame.getState(1)
+          });
+
+          // Transition Host to battle
+          onRoomGameStart(gameId, 0, p2pGame.getState(0));
+        } else if (data.type === 'action') {
+          if (p2pGame) {
+            executeP2PAction(p2pGame, 1, data.actionType, data.payload);
+            const stateForGuest = p2pGame.getState(1);
+            const stateForHost = p2pGame.getState(0);
+            conn.send({ type: 'state', state: stateForGuest });
+            currentGameState = stateForHost;
+            renderGameState(stateForHost);
+          }
+        }
+      });
+    });
+
+    p2pPeer.on('error', (err) => {
+      console.warn('PeerJS Host warning:', err);
+    });
+  } catch (err) {
+    console.warn('initP2PHost exception:', err);
   }
 }
 
@@ -698,12 +814,71 @@ async function joinOnlineRoom(codeToJoin = null) {
   const token = localStorage.getItem('ptcg_token');
   const roomCode = String(codeToJoin || document.getElementById('input-join-room-code').value || '').trim();
   const deckSlot = parseInt(document.getElementById('match-player-deck-select').value, 10) || 1;
+  const btn = document.getElementById('btn-do-join-room');
 
   if (!roomCode) {
     alert('請輸入 4 位數房間代號！');
     return;
   }
 
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '連線加入中...';
+  }
+
+  // 1. Try P2P WebRTC Connection via PeerJS
+  if (typeof Peer !== 'undefined') {
+    try {
+      if (p2pPeer) {
+        try { p2pPeer.destroy(); } catch (e) {}
+      }
+      p2pPeer = new Peer({
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      p2pPeer.on('open', () => {
+        const targetPeerId = `ptcg-room-${roomCode}`;
+        const conn = p2pPeer.connect(targetPeerId, { reliable: true });
+        p2pConnection = conn;
+        isP2PHost = false;
+
+        conn.on('open', () => {
+          console.log('Connected to Host WebRTC DataChannel successfully!');
+          const myUser = JSON.parse(localStorage.getItem('ptcg_user') || '{}');
+          conn.send({
+            type: 'guest_join',
+            roomCode,
+            deckSlot,
+            guestName: myUser.name || '挑戰者'
+          });
+        });
+
+        conn.on('data', (data) => {
+          console.log('Guest received P2P data:', data);
+          if (data.type === 'game_start') {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = '🚪 輸入代碼加入對戰';
+            }
+            onRoomGameStart(data.gameId, 1, data.state);
+          } else if (data.type === 'state') {
+            currentGameState = data.state;
+            renderGameState(data.state);
+          }
+        });
+      });
+    } catch (e) {
+      console.warn('Guest PeerJS error:', e);
+    }
+  }
+
+  // 2. Local Backend Server Fallback
   try {
     const res = await fetch('/api/rooms/join', {
       method: 'POST',
@@ -715,16 +890,22 @@ async function joinOnlineRoom(codeToJoin = null) {
     });
     const data = await res.json();
 
-    if (!data.success) {
-      alert('無法加入房間：\n' + data.message);
+    if (data.success) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '🚪 輸入代碼加入對戰';
+      }
+      onRoomGameStart(data.gameId, 1, data.state);
       return;
     }
+  } catch (err) {}
 
-    onRoomGameStart(data.gameId, 1, data.state); // Client is Player 2
-  } catch (err) {
-    console.error('joinOnlineRoom error:', err);
-    alert('加入房間發生錯誤，請稍後再試！');
-  }
+  setTimeout(() => {
+    if (btn && btn.disabled) {
+      btn.disabled = false;
+      btn.textContent = '🚪 輸入代碼加入對戰';
+    }
+  }, 4000);
 }
 
 async function loadOpenRoomsList() {

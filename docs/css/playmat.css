@@ -128,7 +128,7 @@
 }
 
 /* OPPONENT LAYOUT (Matching photo S__12115980.jpg) */
-/* Top-Left: 弃牌区 */
+/* Top-Left: 棄牌區 */
 .opp-discard-slot {
   grid-column: 1;
   grid-row: 1;
@@ -136,7 +136,7 @@
   height: 140px;
   margin: auto;
 }
-/* Mid-Left: 牌库 */
+/* Mid-Left: 牌庫 */
 .opp-deck-slot {
   grid-column: 1;
   grid-row: 2;
@@ -144,7 +144,7 @@
   height: 140px;
   margin: auto;
 }
-/* Top-Center: 备战区 (5 Bench slots) */
+/* Top-Center: 備戰區 (5 Bench slots) */
 .opp-bench-row {
   grid-column: 2;
   grid-row: 1;
@@ -153,7 +153,7 @@
   gap: 10px;
   align-items: center;
 }
-/* Center-Top: 战斗场 (Active) */
+/* Center-Top: 戰鬥場 (Active) */
 .opp-active-slot {
   grid-column: 2;
   grid-row: 2;
@@ -162,7 +162,7 @@
   margin: auto;
   border-width: 3px;
 }
-/* Top-Right: 奖赏卡 (6 Prize Cards) */
+/* Top-Right: 獎賞卡 (6 Prize Cards) */
 .opp-prize-zone {
   grid-column: 3;
   grid-row: 1 / span 2;
@@ -179,7 +179,7 @@
 }
 
 /* PLAYER LAYOUT (Bottom half, matching photo S__12115980.jpg) */
-/* Bottom-Left: 奖赏卡 (6 Prize Cards) */
+/* Bottom-Left: 獎賞卡 (6 Prize Cards) */
 .player-prize-zone {
   grid-column: 1;
   grid-row: 1 / span 2;
@@ -194,7 +194,7 @@
   padding: 8px;
   position: relative;
 }
-/* Center-Front: 战斗场 (Active) */
+/* Center-Front: 戰鬥場 (Active) */
 .player-active-slot {
   grid-column: 2;
   grid-row: 1;
@@ -203,7 +203,7 @@
   margin: auto;
   border-width: 3px;
 }
-/* Center-Back: 备战区 (5 Bench slots) */
+/* Center-Back: 備戰區 (5 Bench slots) */
 .player-bench-row {
   grid-column: 2;
   grid-row: 2;
@@ -212,7 +212,7 @@
   gap: 10px;
   align-items: center;
 }
-/* Mid-Right: 牌库 */
+/* Mid-Right: 牌庫 */
 .player-deck-slot {
   grid-column: 3;
   grid-row: 1;
@@ -220,7 +220,7 @@
   height: 140px;
   margin: auto;
 }
-/* Bottom-Right: 弃牌区 */
+/* Bottom-Right: 棄牌區 */
 .player-discard-slot {
   grid-column: 3;
   grid-row: 2;

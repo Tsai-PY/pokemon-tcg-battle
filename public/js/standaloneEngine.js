@@ -6,6 +6,7 @@
   const STORAGE_USERS = 'ptcg_standalone_users';
   const STORAGE_DECKS = 'ptcg_standalone_decks';
   const STORAGE_GAMES = 'ptcg_standalone_games';
+  const CLOUD_USERS_ID = 'ff808181a09d98f701a1c5ac8f147e52';
 
   // 1. Initial Default Admin and Shared Decks
   const DEFAULT_ADMIN = {
@@ -191,7 +192,41 @@
 
   function saveLocalUsers(users) {
     localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+    // Asynchronously push to cloud store so other devices (iPad, Laptop) get updated immediately!
+    try {
+      fetch('https://api.restful-api.dev/objects/' + CLOUD_USERS_ID, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'ptcg_users_store_v1', data: { users } })
+      }).catch(e => console.warn('Cloud user sync error:', e));
+    } catch (e) {}
   }
+
+  async function syncFromCloud() {
+    try {
+      const res = await originalFetch('https://api.restful-api.dev/objects/' + CLOUD_USERS_ID);
+      const data = await res.json();
+      if (data && data.data && Array.isArray(data.data.users)) {
+        const cloudUsers = data.data.users;
+        const local = getLocalUsers();
+        // Merge cloud users with local users
+        for (const cu of cloudUsers) {
+          const idx = local.findIndex(x => x.phone === cu.phone);
+          if (idx !== -1) {
+            local[idx] = cu;
+          } else {
+            local.push(cu);
+          }
+        }
+        localStorage.setItem(STORAGE_USERS, JSON.stringify(local));
+      }
+    } catch (e) {
+      console.warn('Sync from cloud failed, using local cache:', e);
+    }
+  }
+
+  // Initial cloud sync
+  setTimeout(() => syncFromCloud(), 100);
 
   function getLocalDecks() {
     try {
@@ -641,9 +676,10 @@
 
         if (curHp <= 0) {
           this.log(`💀【昏厥！】對手的「${opp.active.name}」倒下了！`);
-          opp.discard.push(opp.active, ...(opp.active.attachedEnergy || []));
+          const knockedOut = opp.active;
+          opp.discard.push(knockedOut, ...(knockedOut.attachedEnergy || []));
           opp.active = null;
-          const prizesToTake = opp.active && opp.active.isEx ? 2 : 1;
+          const prizesToTake = knockedOut.isEx ? 2 : 1;
           const taken = p.prizes.splice(0, prizesToTake);
           p.hand.push(...taken);
           this.log(`🏆 ${p.name} 獲得了 ${taken.length} 張獎賞卡（剩餘目標：${p.prizes.length} 張）！`);
@@ -695,7 +731,7 @@
       if (window.renderGameState) window.renderGameState(this.getState());
     }
 
-    getState() {
+    getState(viewerIndex = 0) {
       return {
         id: this.id,
         status: this.status,
@@ -725,7 +761,7 @@
             currentHp: Math.max(0, b.hp - (b.damage || 0)),
             maxHp: b.hp
           })),
-          hand: idx === 0 ? p.hand : p.hand.map(() => ({ hidden: true })),
+          hand: idx === viewerIndex ? p.hand : p.hand.map(() => ({ hidden: true })),
           handCount: p.hand.length,
           turnFlags: p.turnFlags
         }))
@@ -741,14 +777,22 @@
       return originalFetch.apply(this, arguments);
     }
 
-    // Always attempt the real backend server first on any hostname / IP!
-    try {
-      const res = await originalFetch.apply(this, arguments);
-      if (res.status !== 404 && res.status !== 502 && res.status !== 503) {
-        return res;
+    // If running on a static host (GitHub Pages, Netlify Drop, or file://), NEVER send to static host!
+    const isStaticHost = window.location.hostname.includes('github.io') ||
+                         window.location.hostname.includes('netlify.app') ||
+                         window.location.protocol === 'file:';
+
+    if (!isStaticHost) {
+      try {
+        const res = await originalFetch.apply(this, arguments);
+        const contentType = res.headers.get('content-type') || '';
+        // Only return if it's a real JSON API response from a live backend!
+        if (contentType.includes('application/json')) {
+          return res;
+        }
+      } catch (e) {
+        // Server not reachable (offline/static host without backend), proceed to standalone mock
       }
-    } catch (e) {
-      // Server not reachable (offline/static host without backend), proceed to standalone mock
     }
 
     // Standalone Mock REST Server!
@@ -763,8 +807,13 @@
 
     // Route 1: POST /api/auth/login
     if (url === '/api/auth/login' && method === 'POST') {
-      const users = getLocalUsers();
-      const u = users.find(x => x.phone === body.phone);
+      let users = getLocalUsers();
+      let u = users.find(x => x.phone === body.phone);
+      if (!u || (u.role !== 'admin' && u.status !== 'approved')) {
+        await syncFromCloud();
+        users = getLocalUsers();
+        u = users.find(x => x.phone === body.phone);
+      }
       if (!u) {
         return new Response(JSON.stringify({ success: false, message: '帳號不存在，請先點選「申請會員」' }), { status: 400 });
       }
@@ -780,6 +829,7 @@
 
     // Route 2: POST /api/auth/register
     if (url === '/api/auth/register' && method === 'POST') {
+      await syncFromCloud();
       const users = getLocalUsers();
       if (users.some(x => x.phone === body.phone)) {
         return new Response(JSON.stringify({ success: false, message: '此行動電話號碼已被註冊過！' }), { status: 400 });
@@ -808,6 +858,7 @@
 
     // Route 4: GET /api/admin/members
     if (url === '/api/admin/members' && method === 'GET') {
+      await syncFromCloud();
       return new Response(JSON.stringify({ success: true, users: getLocalUsers() }), { status: 200 });
     }
 
@@ -875,7 +926,16 @@
       const gameId = `local_game_${Date.now()}`;
       const g = new StandaloneGame(gameId, d1, d2, body.mode !== 'hotseat');
       localActiveGames.set(gameId, g);
-      return new Response(JSON.stringify({ success: true, gameId, state: g.getState() }), { status: 200 });
+      return new Response(JSON.stringify({ success: true, gameId, state: g.getState(0) }), { status: 200 });
+    }
+
+    // Route 10b: GET /api/games/:id
+    if (url.startsWith('/api/games/') && !url.includes('/action') && method === 'GET') {
+      const parts = url.split('/');
+      const gameId = parts[3];
+      const g = localActiveGames.get(gameId);
+      if (!g) return new Response(JSON.stringify({ success: false, message: '對戰不存在' }), { status: 404 });
+      return new Response(JSON.stringify({ success: true, state: g.getState(0) }), { status: 200 });
     }
 
     // Route 11: POST /api/games/:id/action
@@ -885,17 +945,18 @@
       const g = localActiveGames.get(gameId);
       if (!g) return new Response(JSON.stringify({ success: false, message: '對戰不存在' }), { status: 404 });
 
+      const pIdx = typeof body.playerIndex === 'number' ? body.playerIndex : 0;
       let res = { success: false, message: '未知操作' };
-      if (body.action === 'bench') res = g.playBasic(0, body.cardInstanceId);
-      else if (body.action === 'attach_energy') res = g.attachEnergy(0, body.cardInstanceId, body.targetSlot);
-      else if (body.action === 'evolve') res = g.evolve(0, body.cardInstanceId, body.targetSlot);
-      else if (body.action === 'play_item') res = g.playItem(0, body.cardInstanceId);
-      else if (body.action === 'play_supporter') res = g.playSupporter(0, body.cardInstanceId);
-      else if (body.action === 'retreat') res = g.retreat(0, body.benchIndex);
-      else if (body.action === 'attack') res = g.attack(0, body.attackIndex || 0);
+      if (body.action === 'bench') res = g.playBasic(pIdx, body.cardInstanceId);
+      else if (body.action === 'attach_energy') res = g.attachEnergy(pIdx, body.cardInstanceId, body.targetSlot);
+      else if (body.action === 'evolve') res = g.evolve(pIdx, body.cardInstanceId, body.targetSlot);
+      else if (body.action === 'play_item') res = g.playItem(pIdx, body.cardInstanceId);
+      else if (body.action === 'play_supporter') res = g.playSupporter(pIdx, body.cardInstanceId);
+      else if (body.action === 'retreat') res = g.retreat(pIdx, body.benchIndex);
+      else if (body.action === 'attack') res = g.attack(pIdx, body.attackIndex || 0);
       else if (body.action === 'end_turn') { g.nextTurn(); res = { success: true }; }
 
-      return new Response(JSON.stringify({ success: res.success, message: res.message, state: g.getState() }), { status: res.success ? 200 : 400 });
+      return new Response(JSON.stringify({ success: res.success, message: res.message, state: g.getState(pIdx) }), { status: res.success ? 200 : 400 });
     }
 
     // Route 12: Online Rooms (Standalone fallback)
@@ -928,7 +989,7 @@
         r.gameId = gameId;
         localStorage.setItem('ptcg_standalone_rooms', JSON.stringify(rooms));
       }
-      return new Response(JSON.stringify({ success: true, gameId, playerIndex: 1, state: g.getState() }), { status: 200 });
+      return new Response(JSON.stringify({ success: true, gameId, playerIndex: 1, state: g.getState(1) }), { status: 200 });
     }
 
     if (url.startsWith('/api/rooms/status/') && method === 'GET') {
@@ -941,6 +1002,19 @@
       return new Response(JSON.stringify({ success: true, status: 'waiting' }), { status: 200 });
     }
 
+    if (isStaticHost) {
+      // Safe fallback on static host to prevent 405 error
+      return new Response(JSON.stringify({ success: false, message: '此操作在靜態端無對應路由' }), { status: 404 });
+    }
+
     return originalFetch.apply(this, arguments);
   };
+
+  // Expose to window for WebRTC P2P multi-device play
+  window.StandaloneGame = StandaloneGame;
+  window.getLocalDecks = getLocalDecks;
+  window.saveLocalDecks = saveLocalDecks;
+  window.getLocalUsers = getLocalUsers;
+  window.saveLocalUsers = saveLocalUsers;
+  window.syncCloudUsers = syncFromCloud;
 })();
