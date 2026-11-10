@@ -60,11 +60,13 @@ function initGameWebSocket(gameId) {
     socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      socket.send(JSON.stringify({
-        type: 'join',
-        gameId,
-        playerIndex: currentPlayerIndex
-      }));
+      if (gameId) {
+        socket.send(JSON.stringify({
+          type: 'join',
+          gameId,
+          playerIndex: currentPlayerIndex
+        }));
+      }
     };
 
     socket.onmessage = (event) => {
@@ -73,6 +75,8 @@ function initGameWebSocket(gameId) {
         if (msg.type === 'state') {
           currentGameState = msg.state;
           renderGameState(currentGameState);
+        } else if (msg.type === 'game_start' && msg.gameId) {
+          onRoomGameStart(msg.gameId, 0);
         } else if (msg.type === 'error') {
           alert('操作無效：' + msg.message);
         }
@@ -166,13 +170,13 @@ function renderGameState(state) {
   const oppDeckCount = document.getElementById('opp-deck-count');
   if (oppDeckCount) oppDeckCount.textContent = opponent.deckCount;
 
-  // Top-Center: 备战区 (5 Bench Slots)
+  // Top-Center: 備戰區 (5 Bench Slots)
   const oppBenchRow = document.getElementById('opp-bench-row');
   if (oppBenchRow) {
     const slots = oppBenchRow.querySelectorAll('.bench-card-slot');
     slots.forEach((slotEl, idx) => {
       const bPokemon = opponent.bench[idx];
-      slotEl.innerHTML = bPokemon ? renderCardHtml(bPokemon) : `<span class="mat-slot-label">备战区</span>`;
+      slotEl.innerHTML = bPokemon ? renderCardHtml(bPokemon) : `<span class="mat-slot-label">備戰區</span>`;
       if (bPokemon) {
         slotEl.onclick = () => inspectCard(bPokemon, 'opp_bench', idx);
       } else {
@@ -181,19 +185,19 @@ function renderGameState(state) {
     });
   }
 
-  // Center-Top: 战斗场 (Active)
+  // Center-Top: 戰鬥場 (Active)
   const oppActiveZone = document.getElementById('opp-active-zone');
   if (oppActiveZone) {
-    oppActiveZone.innerHTML = opponent.active ? renderCardHtml(opponent.active) : `<span class="mat-slot-label">战斗场</span>`;
+    oppActiveZone.innerHTML = opponent.active ? renderCardHtml(opponent.active) : `<span class="mat-slot-label">戰鬥場</span>`;
     if (opponent.active) {
       oppActiveZone.onclick = () => inspectCard(opponent.active, 'opp_active');
     }
   }
 
-  // Top-Right: 奖赏卡 (6 Prize Cards)
+  // Top-Right: 獎賞卡 (6 Prize Cards)
   const oppPrizeZone = document.getElementById('opp-prize-zone');
   if (oppPrizeZone) {
-    let prizeHtml = `<span class="mat-slot-label" style="top: -20px; font-size: 0.75rem;">奖赏卡 (${opponent.prizeCount}/6)</span>`;
+    let prizeHtml = `<span class="mat-slot-label" style="top: -20px; font-size: 0.75rem;">獎賞卡 (${opponent.prizeCount}/6)</span>`;
     for (let i = 0; i < opponent.prizeCount; i++) {
       prizeHtml += `<div class="ptcg-card ptcg-card-back prize-card"></div>`;
     }
@@ -201,32 +205,32 @@ function renderGameState(state) {
   }
 
   // 2. PLAYER FIELD (BOTTOM)
-  // Bottom-Left: 奖赏卡 (6 Prize Cards)
+  // Bottom-Left: 獎賞卡 (6 Prize Cards)
   const playerPrizeZone = document.getElementById('player-prize-zone');
   if (playerPrizeZone) {
-    let prizeHtml = `<span class="mat-slot-label" style="top: -20px; font-size: 0.75rem;">奖赏卡 (${player.prizeCount}/6)</span>`;
+    let prizeHtml = `<span class="mat-slot-label" style="top: -20px; font-size: 0.75rem;">獎賞卡 (${player.prizeCount}/6)</span>`;
     for (let i = 0; i < player.prizeCount; i++) {
       prizeHtml += `<div class="ptcg-card ptcg-card-back prize-card"></div>`;
     }
     playerPrizeZone.innerHTML = prizeHtml;
   }
 
-  // Center-Front: 战斗场 (Active)
+  // Center-Front: 戰鬥場 (Active)
   const playerActiveZone = document.getElementById('player-active-zone');
   if (playerActiveZone) {
-    playerActiveZone.innerHTML = player.active ? renderCardHtml(player.active) : `<span class="mat-slot-label">战斗场</span>`;
+    playerActiveZone.innerHTML = player.active ? renderCardHtml(player.active) : `<span class="mat-slot-label">戰鬥場</span>`;
     if (player.active) {
       playerActiveZone.onclick = () => inspectCard(player.active, 'self_active');
     }
   }
 
-  // Center-Back: 备战区 (5 Bench Slots)
+  // Center-Back: 備戰區 (5 Bench Slots)
   const playerBenchRow = document.getElementById('player-bench-row');
   if (playerBenchRow) {
     const slots = playerBenchRow.querySelectorAll('.bench-card-slot');
     slots.forEach((slotEl, idx) => {
       const bPokemon = player.bench[idx];
-      slotEl.innerHTML = bPokemon ? renderCardHtml(bPokemon) : `<span class="mat-slot-label">备战区</span>`;
+      slotEl.innerHTML = bPokemon ? renderCardHtml(bPokemon) : `<span class="mat-slot-label">備戰區</span>`;
       if (bPokemon) {
         slotEl.onclick = () => inspectCard(bPokemon, 'self_bench', idx);
       } else {
@@ -650,11 +654,32 @@ async function createOnlineRoom() {
 }
 
 function initRoomWait(roomCode) {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ type: 'wait_room', roomCode }));
-  }
+  // Ensure WebSocket is active to listen for room update
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/`;
+  try {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      socket = new WebSocket(wsUrl);
+      socket.onopen = () => {
+        socket.send(JSON.stringify({ type: 'wait_room', roomCode }));
+      };
+      socket.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'game_start' && msg.gameId) {
+            onRoomGameStart(msg.gameId, 0);
+          } else if (msg.type === 'state') {
+            currentGameState = msg.state;
+            renderGameState(currentGameState);
+          }
+        } catch (e) {}
+      };
+    } else {
+      socket.send(JSON.stringify({ type: 'wait_room', roomCode }));
+    }
+  } catch (e) {}
 
-  // Also poll /api/rooms/status/:code as fallback
+  // Fast polling fallback: checks every 600ms
   if (roomWaitPollingTimer) clearInterval(roomWaitPollingTimer);
   roomWaitPollingTimer = setInterval(async () => {
     try {
@@ -666,7 +691,7 @@ function initRoomWait(roomCode) {
         onRoomGameStart(data.gameId, 0); // Host is Player 1
       }
     } catch (e) {}
-  }, 1500);
+  }, 600);
 }
 
 async function joinOnlineRoom(codeToJoin = null) {
@@ -743,6 +768,16 @@ function onRoomGameStart(gameId, playerIndex, initialState = null) {
   if (roomWaitPollingTimer) {
     clearInterval(roomWaitPollingTimer);
     roomWaitPollingTimer = null;
+  }
+
+  // Reset host waiting box
+  const infoBox = document.getElementById('room-created-info');
+  const btnCreate = document.getElementById('btn-do-create-room');
+  if (infoBox) infoBox.style.display = 'none';
+  if (btnCreate) {
+    btnCreate.style.display = 'block';
+    btnCreate.disabled = false;
+    btnCreate.textContent = '⚡ 建立對戰房間並產生代號與 QR 碼';
   }
 
   currentGameId = gameId;

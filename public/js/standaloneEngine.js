@@ -741,14 +741,14 @@
       return originalFetch.apply(this, arguments);
     }
 
-    // Try server first if we are on localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      try {
-        const res = await originalFetch.apply(this, arguments);
-        if (res.status !== 404 && res.status !== 502) return res;
-      } catch (e) {
-        // Fall through to standalone interceptor
+    // Always attempt the real backend server first on any hostname / IP!
+    try {
+      const res = await originalFetch.apply(this, arguments);
+      if (res.status !== 404 && res.status !== 502 && res.status !== 503) {
+        return res;
       }
+    } catch (e) {
+      // Server not reachable (offline/static host without backend), proceed to standalone mock
     }
 
     // Standalone Mock REST Server!
