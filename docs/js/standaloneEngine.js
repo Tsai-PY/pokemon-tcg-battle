@@ -719,6 +719,11 @@
       this.log(`【先後攻】硬幣判定由 ${this.players[this.activePlayerIndex].name} 先攻！`);
       this.log(`【獎賞卡】雙方各設置了 6 張獎賞卡，對戰正式開始！`);
       this.log(`★ 規則限制：先攻第一回合「不能抽牌」、「不能使出招式」、「不能使用支援者卡」、「不能進化」。`);
+
+      // 若硬幣判定由電腦AI先攻，自動於 1.2 秒後啟動電腦第一回合行動
+      if (this.players[this.activePlayerIndex].isAi) {
+        setTimeout(() => this.runAiTurn(), 1200);
+      }
     }
 
     nextTurn() {
@@ -735,10 +740,16 @@
         this.status = 'finished';
         this.winner = 1 - this.activePlayerIndex;
         this.winReason = `對手 ${cur.name} 牌庫已無牌可抽（抽牌失敗）！`;
+        if (window.renderGameState) window.renderGameState(this.getState(0));
         return;
       }
       cur.hand.push(cur.deck.shift());
       this.log(`${cur.name} 抽了 1 張卡牌（剩餘牌庫：${cur.deck.length} 張）。`);
+
+      // 即時重新渲染畫面
+      if (window.renderGameState) {
+        window.renderGameState(this.getState(0));
+      }
 
       if (cur.isAi) {
         setTimeout(() => this.runAiTurn(), 1200);
@@ -912,26 +923,30 @@
 
     runAiTurn() {
       if (this.status === 'finished') return;
+      if (this.activePlayerIndex !== 1) return;
       const ai = this.players[1];
-      // 1. Bench
-      const bInHand = ai.hand.find(c => c.supertype === 'pokemon' && c.subtypes.includes('Basic'));
+
+      // 1. 放置基礎寶可夢到備戰區
+      const bInHand = ai.hand.find(c => c.supertype === 'pokemon' && c.subtypes && c.subtypes.includes('Basic'));
       if (bInHand && ai.bench.length < 5) this.playBasic(1, bInHand.instanceId);
 
-      // 2. Attach energy
+      // 2. 附加能量卡
       if (!ai.turnFlags.energyAttached) {
         const e = ai.hand.find(c => c.supertype === 'energy');
         if (e && ai.active) this.attachEnergy(1, e.instanceId, 'active');
       }
 
-      // 3. Attack
+      // 3. 攻擊或結束回合（第一回合先攻依規則不可使出招式，直接結束回合換玩家回合）
       if (this.turnNumber > 1 && ai.active) {
         this.attack(1, 0);
       } else {
         this.nextTurn();
       }
 
-      // Re-render
-      if (window.renderGameState) window.renderGameState(this.getState());
+      // 即時重新渲染戰鬥盤畫面
+      if (window.renderGameState) {
+        window.renderGameState(this.getState(0));
+      }
     }
 
     getState(viewerIndex = 0) {

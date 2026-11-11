@@ -39,6 +39,7 @@ async function startGame() {
     switchView('view-battle');
     initGameWebSocket(currentGameId);
     renderGameState(currentGameState);
+    startBattlePolling();
 
     sfx.playFanfare();
   } catch (err) {
@@ -167,9 +168,39 @@ async function sendGameAction(actionType, payload = {}) {
   }
 }
 
+let battlePollingTimer = null;
+
+function startBattlePolling() {
+  if (battlePollingTimer) clearInterval(battlePollingTimer);
+  battlePollingTimer = setInterval(async () => {
+    if (!currentGameId || !currentGameState || currentGameState.status === 'finished') {
+      stopBattlePolling();
+      return;
+    }
+    // 當處於對手或電腦AI思考回合時，每秒主動輪詢更新遊戲狀態
+    if (currentGameState.activePlayerIndex !== currentPlayerIndex) {
+      try {
+        const res = await fetch(`/api/games/${currentGameId}`);
+        const data = await res.json();
+        if (data && data.success && data.state) {
+          renderGameState(data.state);
+        }
+      } catch (e) {}
+    }
+  }, 1000);
+}
+
+function stopBattlePolling() {
+  if (battlePollingTimer) {
+    clearInterval(battlePollingTimer);
+    battlePollingTimer = null;
+  }
+}
+
 // Render complete battle field matching photo S__12115980.jpg
 function renderGameState(state) {
   if (!state) return;
+  currentGameState = state;
 
   const player = state.players[currentPlayerIndex];
   const opponent = state.players[1 - currentPlayerIndex];
@@ -635,12 +666,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const surrenderBtn = document.getElementById('surrender-btn');
   if (surrenderBtn) surrenderBtn.addEventListener('click', () => {
     if (confirm('確定要離開並退出當前對戰嗎？')) {
+      stopBattlePolling();
       switchView('view-decks');
     }
   });
 
   const gameOverBackBtn = document.getElementById('game-over-back-btn');
   if (gameOverBackBtn) gameOverBackBtn.addEventListener('click', () => {
+    stopBattlePolling();
     document.getElementById('game-over-modal').classList.remove('active');
     switchView('view-decks');
   });
@@ -1049,3 +1082,8 @@ function onRoomGameStart(gameId, playerIndex, initialState = null) {
     if (inputCode) inputCode.value = paramRoom;
   }
 });
+
+// Expose globally for StandaloneEngine and UI callbacks
+window.renderGameState = renderGameState;
+window.startBattlePolling = startBattlePolling;
+window.stopBattlePolling = stopBattlePolling;
