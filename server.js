@@ -155,7 +155,7 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { success: true, validation, cardEntries });
   }
 
-  // 7. Decks: Upload / Save into 5-slot shared deck
+  // 7. Decks: Upload / Save into 10-slot shared deck
   if (pathname === '/api/decks/upload' && method === 'POST') {
     const token = extractToken(req);
     const user = auth.verifyToken(token);

@@ -456,8 +456,8 @@
 
     // Pokemon
     let stage = 'Basic';
-    if (/二階|2階|stage 2/i.test(clean)) stage = 'Stage 2';
-    else if (/一階|1階|stage 1/i.test(clean)) stage = 'Stage 1';
+    if (/二階|2階|stage 2|噴火龍|大比鳥|戟脊龍|多龍巴魯托|沙奈朵|始祖大鳥|魔幻假面喵|耿鬼/i.test(clean)) stage = 'Stage 2';
+    else if (/一階|1階|stage 1|火恐龍|比比鳥|雷丘|凍脊龍|多龍奇|奇魯莉安|蒂蕾喵|天然鳥|vstar/i.test(clean)) stage = 'Stage 1';
 
     let pType = 'Colorless';
     if (/火/i.test(clean)) pType = 'Fire';

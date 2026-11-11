@@ -1,7 +1,89 @@
 // public/js/deckBuilder.js
-// 10-Slot Shared Decks Management & PTCG 60-Card Validator
+// 10-Slot Shared Decks Management & Interactive PTCG 60-Card Visual Editor
 
 let currentSharedDecks = [];
+let editingCardEntries = [];
+let swapTargetIndex = -1;
+
+// Curated list of popular PTCG cards for quick selection
+const POPULAR_CARDS_CATALOG = [
+  {
+    category: '🔥 熱門寶可夢 (Pokémon)',
+    cards: [
+      '噴火龍ex', '小火龍', '火恐龍',
+      '皮卡丘ex', '皮卡丘', '雷丘',
+      '多龍巴魯托ex', '多龍梅西亞', '多龍奇',
+      '沙奈朵ex', '奇魯莉安', '拉魯拉絲', '吼叫尾',
+      '洛奇亞VSTAR', '洛奇亞V', '始祖大鳥', '卡比獸',
+      '厄鬼椪ex', '魔幻假面喵ex', '新葉喵', '蒂蕾喵',
+      '超夢ex', '天然鳥', '天然雀', '耿鬼',
+      '密勒頓ex', '鐵臂膀ex',
+      '古劍豹ex', '涼脊龍', '凍脊龍', '戟脊龍',
+      '轟鳴月ex', '光輝甲賀忍蛙', '光輝胡地',
+      '大比鳥ex', '波波', '比比鳥'
+    ]
+  },
+  {
+    category: '👤 訓練家 - 支援者卡 (Supporters)',
+    cards: [
+      '博士的研究', '老大的指令', '奇樹', '派帕',
+      '阿克羅瑪的實驗', '瑪俐', '莉莉艾', '希羅娜'
+    ]
+  },
+  {
+    category: '🎒 訓練家 - 物品 / 道具卡 (Items & Tools)',
+    cards: [
+      '巢穴球', '高級球', '神奇糖果', '寶可夢交替',
+      '大地之器', '超級能量回收棒', '傷藥', '勇氣護符',
+      '反擊捕獲器', '至尊捕捉器'
+    ]
+  },
+  {
+    category: '⚡ 基本能量卡 (Basic Energies)',
+    cards: [
+      '基本火能量', '基本水能量', '基本電能量', '基本草能量',
+      '基本超能量', '基本鬥能量', '基本惡能量', '基本鋼能量'
+    ]
+  }
+];
+
+function populateCardSelectDropdowns() {
+  const addSelect = document.getElementById('add-card-select');
+  const swapSelect = document.getElementById('swap-card-select');
+
+  const buildOptions = () => {
+    let html = '<option value="">-- 請選擇卡牌 --</option>';
+    POPULAR_CARDS_CATALOG.forEach(group => {
+      html += `<optgroup label="${group.category}">`;
+      group.cards.forEach(card => {
+        html += `<option value="${card}">${card}</option>`;
+      });
+      html += `</optgroup>`;
+    });
+    return html;
+  };
+
+  const optsHtml = buildOptions();
+  if (addSelect) addSelect.innerHTML = optsHtml;
+  if (swapSelect) swapSelect.innerHTML = optsHtml;
+}
+
+function getCardCategoryBadge(name) {
+  const clean = (name || '').trim();
+  if (/至尊|王牌|ace spec/i.test(clean)) {
+    return { type: 'acespec', label: '👑 ACE SPEC', css: 'badge-acespec' };
+  }
+  if (/能量|energy/i.test(clean)) {
+    return { type: 'energy', label: '⚡ 能量卡', css: 'badge-energy' };
+  }
+  if (/研究|博士|指令|老大|奇樹|派帕|瑪俐|莉莉艾|希羅娜|阿克羅瑪/i.test(clean)) {
+    return { type: 'supporter', label: '👤 支援者', css: 'badge-trainer' };
+  }
+  if (/球|傷藥|交替|繩|棒|器|筒|糖果|護符|滑板|捕獲/i.test(clean)) {
+    return { type: 'item', label: '🎒 物品/道具', css: 'badge-trainer' };
+  }
+  return { type: 'pokemon', label: '🐾 寶可夢', css: 'badge-pokemon' };
+}
 
 async function loadSharedDecks() {
   const container = document.getElementById('decks-grid-container');
@@ -26,9 +108,6 @@ async function loadSharedDecks() {
       cardEl.className = 'deck-slot-card';
 
       if (deck) {
-        // Tally categories
-        const pokemonCount = (deck.cardEntries || []).reduce((acc, c) => acc + (c.count || 1), 0);
-        
         cardEl.innerHTML = `
           <div class="deck-slot-badge">槽位 ${slot} / 10</div>
           <h3 class="deck-title">${deck.name}</h3>
@@ -89,40 +168,343 @@ function editDeckInSlot(slot) {
   slotSelect.value = slot;
   const existing = currentSharedDecks.find(d => d.slot === slot);
 
-  if (existing) {
+  if (existing && existing.cardEntries && existing.cardEntries.length > 0) {
     nameInput.value = existing.name;
     descInput.value = existing.description || '';
-    // Format card entries to text
-    textInput.value = existing.cardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+    editingCardEntries = existing.cardEntries.map(e => ({ name: e.name, count: parseInt(e.count, 10) || 1 }));
   } else {
     nameInput.value = `訓練家自訂牌組 ${slot}`;
     descInput.value = '';
-    textInput.value = '';
+    // Load default Charizard template cards if empty slot
+    editingCardEntries = parseTextToEntries(CHARIZARD_TEMPLATE);
   }
 
+  // Format into textarea
+  textInput.value = editingCardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+
+  // Switch to visual editor by default
+  switchEditorTab('visual');
+  populateCardSelectDropdowns();
+  renderEditingCardRows();
+  parseAndValidateDeck(false);
+
   modal.classList.add('active');
-  parseAndValidateDeckText();
 }
 
-function quickBattleWithDeck(slot) {
-  const p1Select = document.getElementById('match-player-deck-select');
-  if (p1Select) p1Select.value = slot;
-  switchView('view-match');
+function parseTextToEntries(text) {
+  if (!text) return [];
+  const lines = text.split(/\r?\n/);
+  const map = new Map();
+
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || /^(Pokémon|Pokemon|Trainer|Energy|寶可夢|訓練家|能量)[:：]/i.test(line)) continue;
+
+    let count = 1;
+    let cardName = line;
+
+    const leadMatch = line.match(/^(\d+)\s*[xX*]?\s+(.+)$/);
+    if (leadMatch) {
+      count = parseInt(leadMatch[1], 10);
+      cardName = leadMatch[2].replace(/\s+[A-Za-z0-9_-]+\s+\d+.*$/, '').trim();
+    } else {
+      const trailMatch = line.match(/^(.+?)\s*[xX*]?\s*(\d+)$/);
+      if (trailMatch) {
+        cardName = trailMatch[1].trim();
+        count = parseInt(trailMatch[2], 10);
+      }
+    }
+
+    if (cardName) {
+      map.set(cardName, (map.get(cardName) || 0) + count);
+    }
+  }
+
+  return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
 }
 
-async function parseAndValidateDeckText() {
-  const text = document.getElementById('upload-deck-text').value;
+function renderEditingCardRows() {
+  const container = document.getElementById('editor-cards-list');
+  const countPill = document.getElementById('visual-deck-count-pill');
+  const totalCardsEl = document.getElementById('visual-total-cards');
+  const countPokemonEl = document.getElementById('visual-count-pokemon');
+  const countTrainerEl = document.getElementById('visual-count-trainer');
+  const countEnergyEl = document.getElementById('visual-count-energy');
+  const countAceSpecEl = document.getElementById('visual-count-acespec');
+  const textInput = document.getElementById('upload-deck-text');
+
+  if (!container) return;
+
+  // Calculate statistics
+  let totalCards = 0;
+  let countPokemon = 0;
+  let countTrainer = 0;
+  let countEnergy = 0;
+  let countAceSpec = 0;
+
+  editingCardEntries.forEach(entry => {
+    const c = entry.count;
+    totalCards += c;
+    const cat = getCardCategoryBadge(entry.name);
+    if (cat.type === 'pokemon') countPokemon += c;
+    else if (cat.type === 'energy') countEnergy += c;
+    else if (cat.type === 'acespec') {
+      countTrainer += c;
+      countAceSpec += c;
+    } else {
+      countTrainer += c;
+    }
+  });
+
+  if (totalCardsEl) totalCardsEl.textContent = totalCards;
+  if (countPokemonEl) countPokemonEl.textContent = countPokemon;
+  if (countTrainerEl) countTrainerEl.textContent = countTrainer;
+  if (countEnergyEl) countEnergyEl.textContent = countEnergy;
+  if (countAceSpecEl) countAceSpecEl.textContent = countAceSpec;
+
+  if (countPill) {
+    if (totalCards === 60) {
+      countPill.className = 'deck-count-pill exact-60';
+      countPill.innerHTML = `🎴 總張數：<span>${totalCards}</span> / 60 張（剛好合格）`;
+    } else if (totalCards < 60) {
+      countPill.className = 'deck-count-pill not-60';
+      countPill.innerHTML = `🎴 總張數：<span>${totalCards}</span> / 60 張（還差 ${60 - totalCards} 張）`;
+    } else {
+      countPill.className = 'deck-count-pill not-60';
+      countPill.innerHTML = `🎴 總張數：<span>${totalCards}</span> / 60 張（超出 ${totalCards - 60} 張）`;
+    }
+  }
+
+  // Sync textarea text
+  if (textInput) {
+    textInput.value = editingCardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+  }
+
+  // Render cards
+  container.innerHTML = '';
+  if (editingCardEntries.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 24px;">牌組目前為空，請點選上方「➕ 新增卡片」或帶入範例！</div>';
+    return;
+  }
+
+  editingCardEntries.forEach((entry, idx) => {
+    const cat = getCardCategoryBadge(entry.name);
+    const emoji = (window.getCardArtEmoji ? window.getCardArtEmoji({ name: entry.name }) : null) || '🎴';
+    const isBasicEnergy = /^基本.*能量$/.test(entry.name);
+
+    const row = document.createElement('div');
+    row.className = 'editor-card-row';
+    row.innerHTML = `
+      <div class="editor-card-info">
+        <span class="editor-card-emoji">${emoji}</span>
+        <div style="min-width: 0;">
+          <div class="editor-card-name" title="${entry.name}">${entry.name}</div>
+          <span class="editor-card-badge ${cat.css}">${cat.label}</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center;">
+        <!-- Quantity Adjustment Controls -->
+        <div class="editor-qty-group">
+          <button type="button" class="btn-qty" onclick="adjustCardQuantity(${idx}, -1)" title="減少數量">−</button>
+          <span class="qty-display">${entry.count}</span>
+          <button type="button" class="btn-qty" onclick="adjustCardQuantity(${idx}, 1)" title="增加數量" ${(!isBasicEnergy && entry.count >= 4) ? 'disabled' : ''}>+</button>
+        </div>
+
+        <!-- Row Actions: Swap & Delete -->
+        <div class="editor-row-actions">
+          <button type="button" class="btn-swap-card" onclick="openSwapCardPanel(${idx})">🔄 更換</button>
+          <button type="button" class="btn-delete-card" onclick="deleteCardRow(${idx})" title="刪除此卡片">🗑️</button>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(row);
+  });
+}
+
+function adjustCardQuantity(index, delta) {
+  if (!editingCardEntries[index]) return;
+  const entry = editingCardEntries[index];
+  const newCount = entry.count + delta;
+  const isBasicEnergy = /^基本.*能量$/.test(entry.name);
+
+  if (newCount <= 0) {
+    if (confirm(`確定要將「${entry.name}」自牌組中移除嗎？`)) {
+      editingCardEntries.splice(index, 1);
+    } else {
+      return;
+    }
+  } else if (!isBasicEnergy && newCount > 4) {
+    alert(`【同名卡限制】\n「${entry.name}」在牌庫中最多只能放 4 張！`);
+    return;
+  } else {
+    entry.count = newCount;
+  }
+
+  renderEditingCardRows();
+  parseAndValidateDeck(false);
+}
+
+function deleteCardRow(index) {
+  if (!editingCardEntries[index]) return;
+  const name = editingCardEntries[index].name;
+  if (confirm(`確定刪除「${name}」？`)) {
+    editingCardEntries.splice(index, 1);
+    renderEditingCardRows();
+    parseAndValidateDeck(false);
+  }
+}
+
+function openSwapCardPanel(index) {
+  swapTargetIndex = index;
+  const panel = document.getElementById('swap-card-panel');
+  const targetLabel = document.getElementById('swap-target-label');
+  const select = document.getElementById('swap-card-select');
+  const customInput = document.getElementById('swap-card-custom-name');
+
+  if (panel && editingCardEntries[index]) {
+    const curName = editingCardEntries[index].name;
+    if (targetLabel) targetLabel.textContent = `將「${curName}」更換為：`;
+    if (select) select.value = '';
+    if (customInput) customInput.value = '';
+    panel.style.display = 'flex';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function confirmSwapCard() {
+  if (swapTargetIndex < 0 || !editingCardEntries[swapTargetIndex]) return;
+  const select = document.getElementById('swap-card-select');
+  const customInput = document.getElementById('swap-card-custom-name');
+  const panel = document.getElementById('swap-card-panel');
+
+  const newName = (customInput && customInput.value.trim()) || (select && select.value) || '';
+  if (!newName) {
+    alert('請從下拉選單選擇卡牌，或手動輸入新卡片名稱！');
+    return;
+  }
+
+  const oldName = editingCardEntries[swapTargetIndex].name;
+  editingCardEntries[swapTargetIndex].name = newName;
+  swapTargetIndex = -1;
+  if (panel) panel.style.display = 'none';
+
+  renderEditingCardRows();
+  parseAndValidateDeck(false);
+}
+
+function cancelSwapCard() {
+  swapTargetIndex = -1;
+  const panel = document.getElementById('swap-card-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function addNewCardFromPanel() {
+  const select = document.getElementById('add-card-select');
+  const customInput = document.getElementById('add-card-custom-name');
+  const countInput = document.getElementById('add-card-count');
+  const panel = document.getElementById('add-card-panel');
+
+  const name = (customInput && customInput.value.trim()) || (select && select.value) || '';
+  const count = parseInt(countInput ? countInput.value : 1, 10) || 1;
+
+  if (!name) {
+    alert('請選擇熱門卡牌或輸入自訂卡片名稱！');
+    return;
+  }
+
+  const isBasicEnergy = /^基本.*能量$/.test(name);
+  const existing = editingCardEntries.find(e => e.name === name);
+
+  if (existing) {
+    if (!isBasicEnergy && (existing.count + count) > 4) {
+      alert(`【同名卡限制】\n「${name}」已在牌庫中有 ${existing.count} 張，加入 ${count} 張將超過上限 4 張限制！`);
+      return;
+    }
+    existing.count += count;
+  } else {
+    if (!isBasicEnergy && count > 4) {
+      alert(`【同名卡限制】\n除基本能量外，卡牌最多放入 4 張！`);
+      return;
+    }
+    editingCardEntries.push({ name, count });
+  }
+
+  // Reset inputs
+  if (select) select.value = '';
+  if (customInput) customInput.value = '';
+  if (countInput) countInput.value = 1;
+
+  renderEditingCardRows();
+  parseAndValidateDeck(false);
+}
+
+function switchEditorTab(mode) {
+  const tabVisual = document.getElementById('btn-tab-visual-editor');
+  const tabText = document.getElementById('btn-tab-text-editor');
+  const boxVisual = document.getElementById('editor-visual-container');
+  const boxText = document.getElementById('editor-text-container');
+  const textInput = document.getElementById('upload-deck-text');
+
+  if (mode === 'visual') {
+    if (tabVisual) tabVisual.className = 'btn btn-primary btn-sm active';
+    if (tabText) tabText.className = 'btn btn-secondary btn-sm';
+    if (boxVisual) boxVisual.style.display = 'block';
+    if (boxText) boxText.style.display = 'none';
+
+    // Sync entries from textarea
+    if (textInput && textInput.value.trim()) {
+      editingCardEntries = parseTextToEntries(textInput.value);
+    }
+    renderEditingCardRows();
+    parseAndValidateDeck(false);
+  } else {
+    if (tabVisual) tabVisual.className = 'btn btn-secondary btn-sm';
+    if (tabText) tabText.className = 'btn btn-primary btn-sm active';
+    if (boxVisual) boxVisual.style.display = 'none';
+    if (boxText) boxText.style.display = 'block';
+
+    // Sync textarea from entries
+    if (textInput) {
+      textInput.value = editingCardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+    }
+    parseAndValidateDeck(false);
+  }
+}
+
+async function parseAndValidateDeck(interactive = false) {
   const validationBox = document.getElementById('deck-validation-box');
   const badge = document.getElementById('deck-validation-badge');
   const list = document.getElementById('deck-validation-list');
   const confirmBtn = document.getElementById('confirm-upload-btn');
+  const textInput = document.getElementById('upload-deck-text');
 
-  if (!text.trim()) {
-    validationBox.style.display = 'none';
+  // Sync text if needed
+  let text = textInput ? textInput.value.trim() : '';
+  if (editingCardEntries.length > 0) {
+    text = editingCardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+    if (textInput) textInput.value = text;
+  }
+
+  if (!text) {
+    if (validationBox) validationBox.style.display = 'block';
+    if (badge) {
+      badge.className = 'status-badge status-rejected';
+      badge.textContent = '牌組為空';
+    }
+    if (list) {
+      list.innerHTML = '<li class="fail">❌ <strong>牌組為空</strong>：請至少加入卡牌以進行 PTCG 規範驗證！</li>';
+    }
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.5';
+    }
+    if (interactive) alert('牌組目前為空，請先加入卡牌！');
     return;
   }
 
-  validationBox.style.display = 'block';
+  if (validationBox) validationBox.style.display = 'block';
 
   try {
     const res = await fetch('/api/decks/parse', {
@@ -133,13 +515,14 @@ async function parseAndValidateDeckText() {
     const data = await res.json();
     const v = data.validation;
 
+    if (!list) return;
     list.innerHTML = '';
 
     // Rule 1: 剛好 60 張卡牌
     const r1Pass = v.totalCards === 60;
     const r1Li = document.createElement('li');
     r1Li.className = r1Pass ? 'pass' : 'fail';
-    r1Li.innerHTML = `${r1Pass ? '✅' : '❌'} <strong>牌數限制</strong>：一副正式牌組必須剛好 60 張（目前：<strong>${v.totalCards} / 60</strong> 張）`;
+    r1Li.innerHTML = `${r1Pass ? '✅' : '❌'} <strong>牌數限制</strong>：一副正式牌組必須剛好 60 張（目前：<strong>${v.totalCards} / 60</strong> 張，${v.totalCards === 60 ? '完全符合' : v.totalCards < 60 ? '還差 ' + (60 - v.totalCards) + ' 張' : '超出 ' + (v.totalCards - 60) + ' 張'}）`;
     list.appendChild(r1Li);
 
     // Rule 2: 同名卡限制 (除基本能量最多4張)
@@ -147,7 +530,7 @@ async function parseAndValidateDeckText() {
     const r2Pass = sameNameErrors.length === 0;
     const r2Li = document.createElement('li');
     r2Li.className = r2Pass ? 'pass' : 'fail';
-    r2Li.innerHTML = `${r2Pass ? '✅' : '❌'} <strong>同名卡限制</strong>：除基本能量外，同名卡最多 4 張 ${r2Pass ? '(通過)' : '（' + sameNameErrors.join('；') + '）'}`;
+    r2Li.innerHTML = `${r2Pass ? '✅' : '❌'} <strong>同名卡限制</strong>：除基本能量外，同名卡最多 4 張 ${r2Pass ? '(合格)' : '（' + sameNameErrors.join('；') + '）'}`;
     list.appendChild(r2Li);
 
     // Rule 3: 特殊卡牌限制 (ACE SPEC 最多 1 張)
@@ -165,18 +548,35 @@ async function parseAndValidateDeckText() {
     list.appendChild(r4Li);
 
     if (v.valid) {
-      badge.className = 'status-badge status-approved';
-      badge.textContent = '符合 PTCG 規範';
-      confirmBtn.disabled = false;
-      confirmBtn.style.opacity = '1';
+      if (badge) {
+        badge.className = 'status-badge status-approved';
+        badge.textContent = '100% 符合 PTCG 規範';
+      }
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+      }
+      if (interactive) {
+        alert('🎉 恭喜！智能辨識與規格驗證全部通過！\n\n• 總牌數：剛好 60 張卡牌\n• 同名卡限制：合格（無超過4張之卡牌）\n• ACE SPEC限制：合格\n• 基礎寶可夢：合格\n\n您可以點擊下方「確認儲存到共同牌庫」儲存牌組！');
+      }
     } else {
-      badge.className = 'status-badge status-rejected';
-      badge.textContent = '未達 60 張規範';
-      confirmBtn.disabled = true;
-      confirmBtn.style.opacity = '0.5';
+      if (badge) {
+        badge.className = 'status-badge status-rejected';
+        badge.textContent = `未達 60 張規範 (${v.totalCards}/60)`;
+      }
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.5';
+      }
+      if (interactive) {
+        alert('⚠️ 智能辨識完成！目前牌組尚未完全符合官方對戰規範：\n\n' + v.errors.join('\n') + '\n\n請利用「+」/「-」或「更換」卡片調整至剛好 60 張即可儲存！');
+      }
     }
   } catch (err) {
-    console.error('parseAndValidateDeckText error:', err);
+    console.error('parseAndValidateDeck error:', err);
+    if (interactive) {
+      alert('辨識驗證發生異常，請重試！');
+    }
   }
 }
 
@@ -185,14 +585,19 @@ async function submitDeckUpload() {
   const slot = parseInt(document.getElementById('upload-slot-select').value, 10);
   const name = document.getElementById('upload-deck-name').value.trim();
   const desc = document.getElementById('upload-deck-desc').value.trim();
-  const rawText = document.getElementById('upload-deck-text').value.trim();
+
+  // Ensure text represents current editing entries
+  let rawText = editingCardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+  if (!rawText.trim()) {
+    rawText = document.getElementById('upload-deck-text').value.trim();
+  }
 
   if (!name) {
     alert('請輸入牌組名稱！');
     return;
   }
   if (!rawText) {
-    alert('請輸入卡牌清單！');
+    alert('請加入卡牌！');
     return;
   }
 
@@ -208,7 +613,7 @@ async function submitDeckUpload() {
     const data = await res.json();
 
     if (!data.success) {
-      alert('上傳失敗：\n' + data.message);
+      alert('儲存失敗：\n' + data.message);
       return;
     }
 
@@ -217,8 +622,14 @@ async function submitDeckUpload() {
     loadSharedDecks();
   } catch (err) {
     console.error('submitDeckUpload error:', err);
-    alert('上傳發生錯誤，請稍後再試！');
+    alert('儲存發生錯誤，請稍後再試！');
   }
+}
+
+function quickBattleWithDeck(slot) {
+  const p1Select = document.getElementById('match-player-deck-select');
+  if (p1Select) p1Select.value = slot;
+  switchView('view-match');
 }
 
 // Preset templates for user convenience
@@ -268,31 +679,90 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeModalBtn = document.getElementById('close-deck-modal-btn');
   const cancelBtn = document.getElementById('cancel-upload-btn');
   const confirmBtn = document.getElementById('confirm-upload-btn');
-  const parseBtn = document.getElementById('btn-parse-deck');
-  const textInput = document.getElementById('upload-deck-text');
 
+  // Dual Mode Tabs
+  const btnTabVisual = document.getElementById('btn-tab-visual-editor');
+  const btnTabText = document.getElementById('btn-tab-text-editor');
+  if (btnTabVisual) btnTabVisual.addEventListener('click', () => switchEditorTab('visual'));
+  if (btnTabText) btnTabText.addEventListener('click', () => switchEditorTab('text'));
+
+  // Validation Buttons
+  const parseBtn = document.getElementById('btn-parse-deck');
+  const parseBtnVisual = document.getElementById('btn-parse-deck-visual');
+  if (parseBtn) parseBtn.addEventListener('click', () => parseAndValidateDeck(true));
+  if (parseBtnVisual) parseBtnVisual.addEventListener('click', () => parseAndValidateDeck(true));
+
+  // Add Card Panel Toggle & Action
+  const btnToggleAdd = document.getElementById('btn-toggle-add-card');
+  const btnConfirmAdd = document.getElementById('btn-confirm-add-card');
+  const btnCancelAdd = document.getElementById('btn-cancel-add-card');
+  const addPanel = document.getElementById('add-card-panel');
+
+  if (btnToggleAdd) {
+    btnToggleAdd.addEventListener('click', () => {
+      if (addPanel) {
+        addPanel.style.display = addPanel.style.display === 'none' ? 'flex' : 'none';
+        if (addPanel.style.display === 'flex') {
+          addPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    });
+  }
+  if (btnConfirmAdd) btnConfirmAdd.addEventListener('click', addNewCardFromPanel);
+  if (btnCancelAdd) btnCancelAdd.addEventListener('click', () => { if (addPanel) addPanel.style.display = 'none'; });
+
+  // Swap Card Actions
+  const btnConfirmSwap = document.getElementById('btn-confirm-swap-card');
+  const btnCancelSwap = document.getElementById('btn-cancel-swap-card');
+  if (btnConfirmSwap) btnConfirmSwap.addEventListener('click', confirmSwapCard);
+  if (btnCancelSwap) btnCancelSwap.addEventListener('click', cancelSwapCard);
+
+  // Textarea live input
+  const textInput = document.getElementById('upload-deck-text');
+  if (textInput) {
+    textInput.addEventListener('input', () => {
+      clearTimeout(window._deckParseTimeout);
+      window._deckParseTimeout = setTimeout(() => {
+        editingCardEntries = parseTextToEntries(textInput.value);
+        parseAndValidateDeck(false);
+      }, 600);
+    });
+  }
+
+  // Modal controls
   if (openModalBtn) openModalBtn.addEventListener('click', () => editDeckInSlot(1));
   if (closeModalBtn) closeModalBtn.addEventListener('click', () => document.getElementById('deck-modal').classList.remove('active'));
   if (cancelBtn) cancelBtn.addEventListener('click', () => document.getElementById('deck-modal').classList.remove('active'));
   if (confirmBtn) confirmBtn.addEventListener('click', submitDeckUpload);
-  if (parseBtn) parseBtn.addEventListener('click', parseAndValidateDeckText);
-  if (textInput) textInput.addEventListener('input', () => {
-    clearTimeout(window._deckParseTimeout);
-    window._deckParseTimeout = setTimeout(parseAndValidateDeckText, 600);
-  });
 
+  // Example templates
   const btnChar = document.getElementById('btn-template-charizard');
   const btnPika = document.getElementById('btn-template-pikachu');
-  if (btnChar) btnChar.addEventListener('click', () => {
-    document.getElementById('upload-deck-name').value = '惡太晶噴火龍ex 狂暴燃燒牌組';
-    document.getElementById('upload-deck-desc').value = '以小火龍進化噴火龍ex為主力，配合大比鳥ex檢索與至尊捕捉器。';
-    document.getElementById('upload-deck-text').value = CHARIZARD_TEMPLATE;
-    parseAndValidateDeckText();
-  });
-  if (btnPika) btnPika.addEventListener('click', () => {
-    document.getElementById('upload-deck-name').value = '皮卡丘ex 頑強電光經典牌組';
-    document.getElementById('upload-deck-desc').value = '以皮卡丘ex特性頑強韌性為核心，黃玉伏特單發爆發300傷害。';
-    document.getElementById('upload-deck-text').value = PIKACHU_TEMPLATE;
-    parseAndValidateDeckText();
-  });
+  if (btnChar) {
+    btnChar.addEventListener('click', () => {
+      document.getElementById('upload-deck-name').value = '惡太晶噴火龍ex 狂暴燃燒牌組';
+      document.getElementById('upload-deck-desc').value = '以小火龍進化噴火龍ex為主力，配合大比鳥ex檢索與至尊捕捉器。';
+      editingCardEntries = parseTextToEntries(CHARIZARD_TEMPLATE);
+      renderEditingCardRows();
+      parseAndValidateDeck(true);
+    });
+  }
+  if (btnPika) {
+    btnPika.addEventListener('click', () => {
+      document.getElementById('upload-deck-name').value = '皮卡丘ex 頑強電光經典牌組';
+      document.getElementById('upload-deck-desc').value = '以皮卡丘ex特性頑強韌性為核心，黃玉伏特單發爆發300傷害。';
+      editingCardEntries = parseTextToEntries(PIKACHU_TEMPLATE);
+      renderEditingCardRows();
+      parseAndValidateDeck(true);
+    });
+  }
 });
+
+// Expose functions globally for onclick attributes
+window.adjustCardQuantity = adjustCardQuantity;
+window.deleteCardRow = deleteCardRow;
+window.openSwapCardPanel = openSwapCardPanel;
+window.confirmSwapCard = confirmSwapCard;
+window.cancelSwapCard = cancelSwapCard;
+window.editDeckInSlot = editDeckInSlot;
+window.quickBattleWithDeck = quickBattleWithDeck;

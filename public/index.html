@@ -421,25 +421,88 @@
           <input type="text" class="form-control" id="upload-deck-desc" placeholder="例如：快速進化大比鳥與噴火龍，爆發附能擊倒對手">
         </div>
 
-        <div class="form-group">
-          <label>輸入卡牌清單（系統將自動辨識卡牌內容與屬性）</label>
-          <textarea class="form-control" id="upload-deck-text" rows="8" placeholder="每行一張卡牌，格式如：&#10;4 小火龍&#10;1 火恐龍&#10;3 噴火龍ex&#10;2 波波&#10;2 大比鳥ex&#10;4 博士的研究&#10;3 老大的指令&#10;1 至尊捕捉器&#10;8 基本火能量&#10;..."></textarea>
-          <div class="form-hint">
-            支援官方 PTCG 格式或簡易名稱（如「4 小火龍」、「噴火龍ex 3」），系統會智能辨識其 HP、屬性、招式及效果！
+        <!-- Dual Mode Tabs -->
+        <div class="deck-editor-tabs">
+          <button type="button" class="btn btn-primary btn-sm active" id="btn-tab-visual-editor">🎴 卡片清單與數量調整</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-tab-text-editor">📝 純文字清單／貼上</button>
+        </div>
+
+        <!-- 1. Interactive Visual Card Editor -->
+        <div id="editor-visual-container">
+          <!-- Live Summary Bar -->
+          <div class="deck-summary-bar">
+            <div>
+              <span id="visual-deck-count-pill" class="deck-count-pill exact-60">
+                🎴 總張數：<span id="visual-total-cards">60</span> / 60 張
+              </span>
+            </div>
+            <div class="deck-breakdown-tags">
+              <span>寶可夢: <strong id="visual-count-pokemon">0</strong></span>
+              <span>訓練家: <strong id="visual-count-trainer">0</strong></span>
+              <span>能量: <strong id="visual-count-energy">0</strong></span>
+              <span>ACE SPEC: <strong id="visual-count-acespec">0</strong>/1</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-accent btn-sm" id="btn-toggle-add-card">➕ 新增卡片</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck-visual">🔍 智能辨識與規格驗證</button>
+            </div>
+          </div>
+
+          <!-- Add Card Panel (Collapsible / Toggleable) -->
+          <div class="add-card-box" id="add-card-panel" style="display: none;">
+            <div style="display: flex; gap: 8px; flex: 1; min-width: 260px;">
+              <select class="form-control" id="add-card-select" style="flex: 1;">
+                <option value="">-- 快速從牌庫選擇熱門卡牌 --</option>
+                <!-- Populated dynamically by JS -->
+              </select>
+              <input type="text" class="form-control" id="add-card-custom-name" placeholder="或手動輸入自訂卡名" style="flex: 1;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label style="font-size: 0.85rem; color: #94a3b8; margin: 0;">數量:</label>
+              <input type="number" class="form-control" id="add-card-count" min="1" max="59" value="1" style="width: 65px; text-align: center;">
+            </div>
+            <button type="button" class="btn btn-success btn-sm" id="btn-confirm-add-card">確認加入</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-add-card">關閉</button>
+          </div>
+
+          <!-- Card Swap Panel -->
+          <div class="add-card-box" id="swap-card-panel" style="display: none; background: rgba(2, 132, 199, 0.15); border-color: #0284c7;">
+            <span style="font-size: 0.9rem; font-weight: bold; color: #38bdf8;" id="swap-target-label">更換卡片：</span>
+            <select class="form-control" id="swap-card-select" style="flex: 1; min-width: 200px;">
+              <!-- Populated dynamically by JS -->
+            </select>
+            <input type="text" class="form-control" id="swap-card-custom-name" placeholder="或輸入自訂新卡名" style="flex: 1; min-width: 160px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-swap-card">確認更換</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-swap-card">取消</button>
+          </div>
+
+          <!-- Scrollable Card Rows -->
+          <div class="editor-cards-scroll" id="editor-cards-list">
+            <!-- Rendered by JS -->
           </div>
         </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 8px;">
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck">🔍 智能辨識與規格驗證</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-template-charizard">📑 帶入經典噴火龍範例</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-template-pikachu">📑 帶入皮卡丘電光範例</button>
+        <!-- 2. Raw Text Editor (Hidden by default, switchable via tab) -->
+        <div id="editor-text-container" style="display: none;">
+          <div class="form-group">
+            <label>輸入卡牌清單（每行一張，如「4 小火龍」或「噴火龍ex 3」）</label>
+            <textarea class="form-control" id="upload-deck-text" rows="10" placeholder="每行一張卡牌，格式如：&#10;4 小火龍&#10;1 火恐龍&#10;3 噴火龍ex&#10;2 波波&#10;2 大比鳥ex&#10;4 博士的研究&#10;3 老大的指令&#10;1 至尊捕捉器&#10;8 基本火能量&#10;..."></textarea>
+            <div class="form-hint">
+              支援官方 PTCG 格式或簡易名稱，輸入後切換回「卡片清單」將自動同步並辨識卡牌內容！
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck">🔍 智能辨識與規格驗證</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-template-charizard">📑 帶入噴火龍範例</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-template-pikachu">📑 帶入皮卡丘範例</button>
+          </div>
         </div>
 
         <!-- Real-time Rules Validation Box -->
-        <div class="validation-bar" id="deck-validation-box" style="display: none;">
+        <div class="validation-bar" id="deck-validation-box" style="margin-top: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 0.95rem;">牌組規範驗證結果：</strong>
-            <span id="deck-validation-badge" class="status-badge">驗證中</span>
+            <strong style="font-size: 0.95rem;">PTCG 官方規格驗證結果：</strong>
+            <span id="deck-validation-badge" class="status-badge status-pending">驗證中</span>
           </div>
           <ul class="validation-checklist" id="deck-validation-list">
             <!-- Populated by JS -->
