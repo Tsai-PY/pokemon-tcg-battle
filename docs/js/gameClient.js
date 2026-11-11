@@ -486,17 +486,39 @@ function inspectCard(card, location, slotIndex = null) {
     </div>
   ` : '';
 
+  const guide = (window.getCardUsageGuide ? window.getCardUsageGuide(card) : null);
+  const guideHtml = guide ? `
+    <div class="card-usage-guide-box">
+      <div class="guide-badge-row">
+        <span class="guide-badge ${guide.categoryClass || 'guide-badge-item'}">${guide.categoryBadge}</span>
+        <span class="guide-badge ${guide.timingClass || 'guide-badge-timing'}">${guide.timingBadge}</span>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title"><span class="guide-icon">📜</span> 卡片效果說明</div>
+        <div class="guide-desc">${guide.effectText}</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title"><span class="guide-icon">⏱️</span> 使用時機與規則</div>
+        <div class="guide-desc guide-desc-rule">${guide.timingText}</div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-title"><span class="guide-icon">💡</span> 實用對戰技巧</div>
+        <div class="guide-desc guide-desc-tactics">${guide.tacticsTip}</div>
+      </div>
+    </div>
+  ` : (card.text ? `<div style="font-size: 0.85rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px;">${card.text}</div>` : '');
+
   content.innerHTML = `
     <div style="display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap;">
       ${cardPhotoHtml}
-      <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 6px;">
           <h3 style="font-size: 1.25rem; font-weight: 800; color: #ffcb05; margin: 0;">${card.name}</h3>
           <span style="font-size: 0.85rem; color: #94a3b8;">${card.subtypes ? card.subtypes.join(' / ') : ''}</span>
         </div>
         ${card.hp ? `<div style="font-size: 0.95rem; font-weight: bold; color: #ef4444;">當前 HP: ${card.currentHp || card.hp} / ${card.maxHp || card.hp} (傷害: ${card.damage || 0})</div>` : ''}
-        ${card.text ? `<div style="font-size: 0.85rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px;">${card.text}</div>` : ''}
         ${abilityHtml}
+        ${guideHtml}
       </div>
     </div>
 

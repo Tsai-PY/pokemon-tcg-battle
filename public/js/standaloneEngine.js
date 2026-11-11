@@ -430,19 +430,35 @@
 
     // Supporter
     if (/研究|博士|指令|老大|奇樹|派帕|阿克羅瑪|赤日|希羅娜|莉莉艾|瑪俐/i.test(clean)) {
+      let supporterText = '支援者卡：在自己回合主要階段使用，每回合限 1 張，先攻首回合不可使用。';
+      if (clean.includes('博士')) supporterText = '將自己的所有手牌全部丟棄，然後從牌庫抽取 7 張卡片。';
+      else if (clean.includes('老大')) supporterText = '選擇對手的 1 隻備戰寶可夢，強制與其戰鬥場上的寶可夢互換。';
+      else if (clean.includes('奇樹')) supporterText = '雙方將手牌洗回牌庫下方，各自依自己剩餘獎賞卡張數抽卡。';
+      else if (clean.includes('派帕')) supporterText = '從牌庫選擇 1 張物品卡與 1 張寶可夢道具卡加入手牌。';
       return {
         id: `card_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         name: clean,
         supertype: 'trainer',
         subtypes: ['Supporter'],
         effect: clean.includes('博士') ? 'discard_hand_draw_7' : clean.includes('老大') ? 'boss_orders_switch' : 'custom_supporter_draw',
-        text: '支援者卡效果。'
+        text: supporterText
       };
     }
 
     // Item / Tool
     if (/球|傷藥|交替|繩|棒|器|筒|指針|糖果|護符|滑板|捕獲/i.test(clean) || isAceSpec) {
       const subtypes = isAceSpec ? ['Item', 'ACE SPEC'] : (/護符|滑板/i.test(clean) ? ['Tool'] : ['Item']);
+      let itemText = '物品卡：在自己回合的主要階段可使用任意張數。';
+      if (isAceSpec || clean.includes('至尊')) itemText = '【ACE SPEC】選擇對手 1 隻備戰寶可夢與戰鬥場互換，接著自己也進行戰鬥寶可夢與備戰互換。';
+      else if (clean.includes('高級球')) itemText = '丟棄 2 張手牌，從牌庫搜尋任意 1 隻寶可夢加入手牌，重洗牌庫。';
+      else if (clean.includes('巢穴球')) itemText = '從自己的牌庫選擇 1 隻基礎寶可夢放置於備戰區，重洗牌庫。';
+      else if (clean.includes('糖果')) itemText = '選擇場上 1 隻基礎寶可夢，直接進化為手牌對應的 2 階進化寶可夢！';
+      else if (clean.includes('交替')) itemText = '將自己的戰鬥寶可夢與備戰區的 1 隻寶可夢互換。';
+      else if (clean.includes('棒') || clean.includes('回收')) itemText = '從棄牌區選擇寶可夢與基本能量合計最多 3 張洗回牌庫。';
+      else if (clean.includes('器')) itemText = '丟棄 1 張手牌，從牌庫搜尋最多 2 張基本能量卡加入手牌。';
+      else if (clean.includes('傷藥')) itemText = '選擇自己的 1 隻寶可夢，恢復其 30 點 HP。';
+      else if (clean.includes('護符')) itemText = '【寶可夢道具】附有這張卡的基礎寶可夢最大 HP +50 點。';
+      else if (clean.includes('捕獲')) itemText = '當自己剩餘獎賞卡比對手多時才可使用，將對手 1 隻備戰寶可夢拉上戰鬥場。';
       return {
         id: `card_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         name: clean,
@@ -450,7 +466,7 @@
         subtypes,
         isAceSpec,
         effect: isAceSpec ? 'prime_catcher_double_switch' : clean.includes('傷藥') ? 'heal_30' : clean.includes('交替') ? 'switch_active_bench' : 'search_basic_bench',
-        text: isAceSpec ? '【ACE SPEC】王牌道具。' : '物品卡效果。'
+        text: itemText
       };
     }
 
