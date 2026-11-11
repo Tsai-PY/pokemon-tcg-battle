@@ -1,5 +1,5 @@
 // public/js/deckBuilder.js
-// 5-Slot Shared Decks Management & PTCG 60-Card Validator
+// 10-Slot Shared Decks Management & PTCG 60-Card Validator
 
 let currentSharedDecks = [];
 
@@ -20,7 +20,7 @@ async function loadSharedDecks() {
     if (matchP1Select) matchP1Select.innerHTML = '';
     if (matchP2Select) matchP2Select.innerHTML = '';
 
-    for (let slot = 1; slot <= 5; slot++) {
+    for (let slot = 1; slot <= 10; slot++) {
       const deck = currentSharedDecks.find(d => d.slot === slot);
       const cardEl = document.createElement('div');
       cardEl.className = 'deck-slot-card';
@@ -30,7 +30,7 @@ async function loadSharedDecks() {
         const pokemonCount = (deck.cardEntries || []).reduce((acc, c) => acc + (c.count || 1), 0);
         
         cardEl.innerHTML = `
-          <div class="deck-slot-badge">槽位 ${slot} / 5</div>
+          <div class="deck-slot-badge">槽位 ${slot} / 10</div>
           <h3 class="deck-title">${deck.name}</h3>
           <div class="deck-meta">作者：${deck.author} | 更新時間：${new Date(deck.updatedAt).toLocaleDateString()}</div>
           <p class="deck-description">${deck.description || '標準 60 張 PTCG 對戰牌組'}</p>
@@ -59,7 +59,7 @@ async function loadSharedDecks() {
         }
       } else {
         cardEl.innerHTML = `
-          <div class="deck-slot-badge">槽位 ${slot} / 5</div>
+          <div class="deck-slot-badge">槽位 ${slot} / 10</div>
           <h3 class="deck-title" style="color: #94a3b8;">空槽位</h3>
           <p class="deck-description" style="color: #64748b;">尚未上傳牌組。任何會員皆可上傳牌組至此共同槽位！</p>
           <div class="deck-actions" style="margin-top: auto;">

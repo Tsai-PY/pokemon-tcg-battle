@@ -20,7 +20,7 @@
     </div>
 
     <nav class="nav-links" id="main-nav" style="display: none;">
-      <button class="nav-btn active" data-view="view-decks">🎴 共同牌庫 (5組)</button>
+      <button class="nav-btn active" data-view="view-decks">🎴 共同牌庫 (10組)</button>
       <button class="nav-btn" data-view="view-match">⚔️ 開始對戰</button>
       <button class="nav-btn" data-view="view-admin" id="nav-admin-btn" style="display: none;">👑 管理員審核</button>
     </nav>
@@ -97,7 +97,7 @@
         <div class="glass-card">
           <div class="section-header">
             <div>
-              <h2 class="section-title">🎴 系統共同牌庫（最多接受 5 組）</h2>
+              <h2 class="section-title">🎴 系統共同牌庫（最多接受 10 組）</h2>
               <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
                 會員可上傳自己的 60 張牌庫，系統自動辨識卡片內容並建置資料，對戰雙方皆可自由選用。
               </p>
@@ -105,7 +105,7 @@
             <button class="btn btn-accent" id="open-upload-modal-btn">📤 上傳/替換共同牌庫</button>
           </div>
 
-          <!-- 5 Shared Decks Grid -->
+          <!-- 10 Shared Decks Grid -->
           <div class="decks-grid" id="decks-grid-container">
             <!-- Rendered by JS -->
           </div>
@@ -396,13 +396,18 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>存入共同牌庫槽位（上限 5 組）</label>
+          <label>存入共同牌庫槽位（上限 10 組）</label>
           <select class="form-control" id="upload-slot-select">
             <option value="1">槽位 1</option>
             <option value="2">槽位 2</option>
             <option value="3">槽位 3</option>
             <option value="4">槽位 4</option>
             <option value="5">槽位 5</option>
+            <option value="6">槽位 6</option>
+            <option value="7">槽位 7</option>
+            <option value="8">槽位 8</option>
+            <option value="9">槽位 9</option>
+            <option value="10">槽位 10</option>
           </select>
         </div>
 

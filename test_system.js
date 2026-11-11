@@ -44,7 +44,7 @@ console.log('✓ 審核通過後會員成功登入');
 console.log('\n--- 2. 測試牌庫規範 (60張/同名卡4張/ACE SPEC 1張) ---');
 // Test valid deck
 const decks = getSharedDecks();
-assert.strictEqual(decks.length, 5, '共同牌庫應有 5 組');
+assert.strictEqual(decks.length, 10, '共同牌庫應有 10 組');
 console.log(`✓ 共同牌庫已載入 ${decks.length} 組預設牌組`);
 
 // Test rule: > 4 copies

@@ -175,6 +175,162 @@
       totalCards: 60,
       valid: true,
       updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'deck_6',
+      slot: 6,
+      name: '多龍巴魯托ex 幻影奇襲龍牌組',
+      author: '系統預設',
+      authorPhone: '0988229731',
+      description: '二階龍系狙擊神卡！多龍巴魯托ex「幻影奇襲」前台爆發200傷害，並在備戰區任意放置6個傷害指示物，精準收割！',
+      cardEntries: [
+        { name: '多龍巴魯托ex', count: 3 },
+        { name: '多龍梅西亞', count: 4 },
+        { name: '多龍奇', count: 3 },
+        { name: '光輝胡地', count: 1 },
+        { name: '天然鳥', count: 2 },
+        { name: '天然雀', count: 2 },
+        { name: '博士的研究', count: 4 },
+        { name: '老大的指令', count: 3 },
+        { name: '奇樹', count: 3 },
+        { name: '派帕', count: 3 },
+        { name: '巢穴球', count: 4 },
+        { name: '高級球', count: 4 },
+        { name: '神奇糖果', count: 4 },
+        { name: '寶可夢交替', count: 2 },
+        { name: '大地之器', count: 2 },
+        { name: '超級能量回收棒', count: 1 },
+        { name: '至尊捕捉器', count: 1 },
+        { name: '基本超能量', count: 8 },
+        { name: '基本火能量', count: 6 }
+      ],
+      totalCards: 60,
+      valid: true,
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'deck_7',
+      slot: 7,
+      name: '沙奈朵ex 精神擁抱超能牌組',
+      author: '系統預設',
+      authorPhone: '0988229731',
+      description: '超能系永動機！沙奈朵ex特性「精神擁抱」一回合自墓地無上限狂貼超能量，吼叫尾超長程狙擊轟沉對手！',
+      cardEntries: [
+        { name: '沙奈朵ex', count: 3 },
+        { name: '奇魯莉安', count: 4 },
+        { name: '拉魯拉絲', count: 4 },
+        { name: '吼叫尾', count: 2 },
+        { name: '光輝甲賀忍蛙', count: 1 },
+        { name: '博士的研究', count: 4 },
+        { name: '老大的指令', count: 3 },
+        { name: '奇樹', count: 4 },
+        { name: '派帕', count: 2 },
+        { name: '巢穴球', count: 4 },
+        { name: '高級球', count: 4 },
+        { name: '神奇糖果', count: 3 },
+        { name: '寶可夢交替', count: 2 },
+        { name: '大地之器', count: 2 },
+        { name: '勇氣護符', count: 2 },
+        { name: '至尊捕捉器', count: 1 },
+        { name: '超級能量回收棒', count: 1 },
+        { name: '基本超能量', count: 14 }
+      ],
+      totalCards: 60,
+      valid: true,
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'deck_8',
+      slot: 8,
+      name: '洛奇亞VSTAR 白銀狂風無色牌組',
+      author: '系統預設',
+      authorPhone: '0988229731',
+      description: 'VSTAR力量狂嘯！洛奇亞VSTAR「召集之星」直接自棄牌區特召2隻始祖大鳥，瞬間填滿能量、一擊必殺！',
+      cardEntries: [
+        { name: '洛奇亞VSTAR', count: 3 },
+        { name: '洛奇亞V', count: 4 },
+        { name: '始祖大鳥', count: 4 },
+        { name: '卡比獸', count: 2 },
+        { name: '光輝甲賀忍蛙', count: 1 },
+        { name: '博士的研究', count: 4 },
+        { name: '老大的指令', count: 3 },
+        { name: '奇樹', count: 3 },
+        { name: '派帕', count: 3 },
+        { name: '高級球', count: 4 },
+        { name: '巢穴球', count: 4 },
+        { name: '寶可夢交替', count: 3 },
+        { name: '大地之器', count: 2 },
+        { name: '勇氣護符', count: 2 },
+        { name: '傷藥', count: 2 },
+        { name: '至尊捕捉器', count: 1 },
+        { name: '基本電能量', count: 5 },
+        { name: '基本火能量', count: 5 },
+        { name: '基本水能量', count: 5 }
+      ],
+      totalCards: 60,
+      valid: true,
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'deck_9',
+      slot: 9,
+      name: '厄鬼椪ex 碧之假面草牌組',
+      author: '系統預設',
+      authorPhone: '0988229731',
+      description: '草屬性極限爆發！厄鬼椪 碧之假面ex特性自手牌附能抽牌，搭配魔幻假面喵ex「花漾炸彈」雙線重創！',
+      cardEntries: [
+        { name: '厄鬼椪ex', count: 4 },
+        { name: '新葉喵', count: 4 },
+        { name: '蒂蕾喵', count: 2 },
+        { name: '魔幻假面喵ex', count: 3 },
+        { name: '光輝甲賀忍蛙', count: 1 },
+        { name: '博士的研究', count: 4 },
+        { name: '老大的指令', count: 3 },
+        { name: '奇樹', count: 3 },
+        { name: '派帕', count: 3 },
+        { name: '巢穴球', count: 4 },
+        { name: '高級球', count: 4 },
+        { name: '神奇糖果', count: 3 },
+        { name: '大地之器', count: 2 },
+        { name: '寶可夢交替', count: 2 },
+        { name: '勇氣護符', count: 2 },
+        { name: '超級能量回收棒', count: 1 },
+        { name: '至尊捕捉器', count: 1 },
+        { name: '基本草能量', count: 14 }
+      ],
+      totalCards: 60,
+      valid: true,
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'deck_10',
+      slot: 10,
+      name: '超夢ex 精神強念超能極致牌組',
+      author: '系統預設',
+      authorPhone: '0988229731',
+      description: '初代神獸降臨！超夢ex超能爆發單體高傷害，搭配天然鳥特性「神清氣爽」雙充能抽牌，運轉極度流暢穩定！',
+      cardEntries: [
+        { name: '超夢ex', count: 4 },
+        { name: '天然雀', count: 4 },
+        { name: '天然鳥', count: 4 },
+        { name: '耿鬼', count: 2 },
+        { name: '光輝胡地', count: 1 },
+        { name: '博士的研究', count: 4 },
+        { name: '老大的指令', count: 3 },
+        { name: '奇樹', count: 3 },
+        { name: '派帕', count: 3 },
+        { name: '巢穴球', count: 4 },
+        { name: '高級球', count: 4 },
+        { name: '寶可夢交替', count: 3 },
+        { name: '大地之器', count: 2 },
+        { name: '勇氣護符', count: 2 },
+        { name: '傷藥', count: 2 },
+        { name: '至尊捕捉器', count: 1 },
+        { name: '基本超能量', count: 14 }
+      ],
+      totalCards: 60,
+      valid: true,
+      updatedAt: new Date().toISOString()
     }
   ];
 
@@ -231,7 +387,7 @@
   function getLocalDecks() {
     try {
       const d = JSON.parse(localStorage.getItem(STORAGE_DECKS));
-      if (Array.isArray(d) && d.length === 5) return d;
+      if (Array.isArray(d) && d.length === 10) return d;
     } catch (e) {}
     localStorage.setItem(STORAGE_DECKS, JSON.stringify(DEFAULT_SHARED_DECKS));
     return DEFAULT_SHARED_DECKS;
