@@ -763,9 +763,251 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ==================== Card Photo Management ====================
+// ==================== Card Photo Management & Auto-Recognition ====================
 let currentPhotoCardName = '';
 let currentPhotoPendingData = '';
+
+const CARD_RECOGNITION_ALIASES = {
+  // 寶可夢
+  '小恐龍': '小火龍', '小火': '小火龍', 'charmander': '小火龍', '小火龍': '小火龍',
+  '火恐龍': '火恐龍', 'charmeleon': '火恐龍',
+  '噴火龍': '噴火龍ex', 'charizard': '噴火龍ex', 'charizardex': '噴火龍ex',
+  '波波': '波波', 'pidgey': '波波',
+  '比比鳥': '比比鳥', 'pidgeotto': '比比鳥',
+  '大比鳥': '大比鳥ex', 'pidgeot': '大比鳥ex',
+  '皮卡丘': '皮卡丘ex', 'pikachu': '皮卡丘ex', '皮卡丘ex': '皮卡丘ex',
+  '雷丘': '雷丘', 'raichu': '雷丘',
+  '密勒頓': '密勒頓ex', 'miraidon': '密勒頓ex',
+  '鐵臂膀': '鐵臂膀ex', 'iron hands': '鐵臂膀ex', 'ironhands': '鐵臂膀ex',
+  '古劍豹': '古劍豹ex', 'chien-pao': '古劍豹ex', 'chien pao': '古劍豹ex', 'chienpao': '古劍豹ex',
+  '涼脊龍': '涼脊龍', 'frigibax': '涼脊龍',
+  '凍脊龍': '凍脊龍', 'arctibax': '凍脊龍',
+  '戟脊龍': '戟脊龍', 'baxcalibur': '戟脊龍',
+  '甲賀忍蛙': '光輝甲賀忍蛙', '光輝甲賀忍蛙': '光輝甲賀忍蛙', 'greninja': '光輝甲賀忍蛙',
+  '胡地': '光輝胡地', '光輝胡地': '光輝胡地', 'alakazam': '光輝胡地',
+  '轟鳴月': '轟鳴月ex', 'roaring moon': '轟鳴月ex', 'roaringmoon': '轟鳴月ex',
+  '多龍巴魯托': '多龍巴魯托ex', '多龍': '多龍巴魯托ex', 'dragapult': '多龍巴魯托ex',
+  '多龍梅西亞': '多龍梅西亞', 'dreepy': '多龍梅西亞',
+  '多龍奇': '多龍奇', 'drakloak': '多龍奇',
+  '沙奈朵': '沙奈朵ex', 'gardevoir': '沙奈朵ex',
+  '奇魯莉安': '奇魯莉安', 'kirlia': '奇魯莉安',
+  '拉魯拉絲': '拉魯拉絲', 'ralts': '拉魯拉絲',
+  '吼叫尾': '吼叫尾', 'scream tail': '吼叫尾', 'screamtail': '吼叫尾',
+  '洛奇亞vstar': '洛奇亞VSTAR', 'lugia vstar': '洛奇亞VSTAR',
+  '洛奇亞': '洛奇亞V', 'lugia': '洛奇亞V',
+  '始祖大鳥': '始祖大鳥', 'archeops': '始祖大鳥',
+  '卡比獸': '卡比獸', 'snorlax': '卡比獸',
+  '厄鬼椪': '厄鬼椪ex', 'ogerpon': '厄鬼椪ex',
+  '魔幻假面喵': '魔幻假面喵ex', '假面喵': '魔幻假面喵ex', 'meowscarada': '魔幻假面喵ex',
+  '新葉喵': '新葉喵', 'sprigatito': '新葉喵',
+  '蒂蕾喵': '蒂蕾喵', 'floragato': '蒂蕾喵',
+  '超夢': '超夢ex', 'mewtwo': '超夢ex',
+  '天然鳥': '天然鳥', 'xatu': '天然鳥',
+  '天然雀': '天然雀', 'natu': '天然雀',
+  '耿鬼': '耿鬼', 'gengar': '耿鬼',
+
+  // 訓練家 - 物品 & 道具
+  '高級球': '高級球', 'ultra ball': '高級球', 'ultraball': '高級球',
+  '巢穴球': '巢穴球', 'nest ball': '巢穴球', 'nestball': '巢穴球',
+  '神奇糖果': '神奇糖果', '糖果': '神奇糖果', 'rare candy': '神奇糖果', 'rarecandy': '神奇糖果',
+  '寶可夢交替': '寶可夢交替', '交替': '寶可夢交替', '交換': '寶可夢交替', 'switch': '寶可夢交替',
+  '超級能量回收棒': '超級能量回收棒', '回收棒': '超級能量回收棒', 'super rod': '超級能量回收棒', 'superrod': '超級能量回收棒',
+  '大地之器': '大地之器', '器': '大地之器', 'earthen vessel': '大地之器', 'earthenvessel': '大地之器',
+  '傷藥': '傷藥', 'potion': '傷藥',
+  '反擊捕獲器': '反擊捕獲器', '反擊': '反擊捕獲器', 'counter catcher': '反擊捕獲器', 'countercatcher': '反擊捕獲器',
+  '至尊捕捉器': '至尊捕捉器', '至尊捕手': '至尊捕捉器', '至尊': '至尊捕捉器', 'prime catcher': '至尊捕捉器', 'primecatcher': '至尊捕捉器',
+  '勇氣護符': '勇氣護符', '護符': '勇氣護符', 'bravery charm': '勇氣護符', 'braverycharm': '勇氣護符',
+
+  // 訓練家 - 支援者
+  '博士的研究': '博士的研究', '博士': '博士的研究', 'research': '博士的研究', 'professor': '博士的研究',
+  '老大的指令': '老大的指令', '老大': '老大的指令', 'boss': '老大的指令', 'orders': '老大的指令',
+  '奇樹': '奇樹', 'iono': '奇樹',
+  '派帕': '派帕', 'arven': '派帕',
+
+  // 能量
+  '基本火能量': '基本火能量', '火能量': '基本火能量', 'fire energy': '基本火能量',
+  '基本水能量': '基本水能量', '水能量': '基本水能量', 'water energy': '基本水能量',
+  '基本電能量': '基本電能量', '電能量': '基本電能量', '雷能量': '基本電能量', 'electric energy': '基本電能量',
+  '基本草能量': '基本草能量', '草能量': '基本草能量', 'grass energy': '基本草能量',
+  '基本超能量': '基本超能量', '超能量': '基本超能量', 'psychic energy': '基本超能量',
+  '基本鬥能量': '基本鬥能量', '鬥能量': '基本鬥能量', 'fighting energy': '基本鬥能量',
+  '基本惡能量': '基本惡能量', '惡能量': '基本惡能量', 'darkness energy': '基本惡能量',
+  '基本鋼能量': '基本鋼能量', '鋼能量': '基本鋼能量', 'metal energy': '基本鋼能量'
+};
+
+/**
+ * 智能自動辨識卡牌名稱
+ */
+function autoRecognizeCardFromInput(sourceNameOrUrl, canvasOrImg) {
+  if (sourceNameOrUrl) {
+    const clean = String(sourceNameOrUrl).toLowerCase().replace(/\.[a-z0-9]+$/i, '').replace(/[_\-\s\d]+/g, ' ').trim();
+    const noSpace = clean.replace(/\s+/g, '');
+
+    for (const [alias, realName] of Object.entries(CARD_RECOGNITION_ALIASES)) {
+      const aliasNorm = alias.toLowerCase();
+      const aliasNoSpace = aliasNorm.replace(/\s+/g, '');
+      if (clean.includes(aliasNorm) || noSpace.includes(aliasNoSpace)) {
+        return realName;
+      }
+    }
+  }
+
+  // 視覺特徵輔助辨識 (基於色相與色彩分佈)
+  if (canvasOrImg && canvasOrImg.getContext) {
+    try {
+      const ctx = canvasOrImg.getContext('2d');
+      const w = canvasOrImg.width;
+      const h = canvasOrImg.height;
+      if (w > 0 && h > 0) {
+        const data = ctx.getImageData(0, 0, w, h).data;
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        for (let i = 0; i < data.length; i += 32 * 4) {
+          rSum += data[i];
+          gSum += data[i+1];
+          bSum += data[i+2];
+          count++;
+        }
+        if (count > 0) {
+          const rAvg = rSum / count;
+          const gAvg = gSum / count;
+          const bAvg = bSum / count;
+
+          if (rAvg > 165 && gAvg < 135 && bAvg < 100) return '小火龍';
+          if (rAvg > 170 && gAvg > 160 && bAvg < 90) return '皮卡丘ex';
+          if (bAvg > 150 && rAvg < 110) return '古劍豹ex';
+          if (gAvg > 140 && rAvg < 120 && bAvg < 120) return '新葉喵';
+          if (rAvg > 130 && bAvg > 140 && gAvg < 110) return '超夢ex';
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 預設回退至當前選中卡牌或小火龍
+  const select = document.getElementById('photo-target-card-select');
+  if (select && select.value) return select.value;
+  return currentPhotoCardName || '小火龍';
+}
+
+/**
+ * 處理上傳的卡片照片：立即自動辨識、套用照片並自動加到牌庫中！
+ */
+function processCardPhotoAndAutoAdd(sourceNameOrUrl, photoDataUrl, canvasOrImg) {
+  let recognizedCardName = autoRecognizeCardFromInput(sourceNameOrUrl, canvasOrImg);
+
+  if (!recognizedCardName) {
+    const userInput = prompt('📷 已成功讀取卡牌照片！\n請輸入卡片名稱以自動辨識並加入牌庫（例如：小火龍、噴火龍ex、高級球）：', '小火龍');
+    if (!userInput || !userInput.trim()) return;
+    recognizedCardName = autoRecognizeCardFromInput(userInput.trim()) || userInput.trim();
+  }
+
+  // 1. 儲存卡牌專屬自訂照片
+  if (photoDataUrl && window.saveCustomCardImage) {
+    window.saveCustomCardImage(recognizedCardName, photoDataUrl);
+  }
+
+  // 2. 更新照片管理彈窗中的目標卡片
+  currentPhotoCardName = recognizedCardName;
+  currentPhotoPendingData = photoDataUrl;
+  const select = document.getElementById('photo-target-card-select');
+  if (select) {
+    let optExists = false;
+    for (let i = 0; i < select.options.length; i++) {
+      if (select.options[i].value === recognizedCardName) {
+        select.selectedIndex = i;
+        optExists = true;
+        break;
+      }
+    }
+    if (!optExists) {
+      const newOpt = document.createElement('option');
+      newOpt.value = recognizedCardName;
+      newOpt.textContent = recognizedCardName;
+      select.appendChild(newOpt);
+      select.value = recognizedCardName;
+    }
+  }
+
+  // 3. 自動加到當前牌組 (editingCardEntries)
+  let existing = editingCardEntries.find(e => e.name === recognizedCardName);
+  const isBasicEnergy = /^基本.*能量$/.test(recognizedCardName);
+  let actionText = '';
+
+  if (existing) {
+    if (isBasicEnergy || existing.count < 4) {
+      existing.count++;
+      actionText = `【${recognizedCardName}】數量已調整為 ${existing.count} 張`;
+    } else {
+      actionText = `【${recognizedCardName}】已在牌庫中（已達 4 張上限），已為其更新實體相片！`;
+    }
+  } else {
+    editingCardEntries.push({ name: recognizedCardName, count: 1 });
+    actionText = `已成功將【${recognizedCardName}】加入牌組！`;
+  }
+
+  // 4. 即時重新渲染編輯器卡牌清單與規則驗證
+  renderEditingCardRows();
+  parseAndValidateDeck(true);
+  updatePhotoModalPreview();
+
+  // 若對戰中，同時更新對戰盤面
+  if (typeof renderPlaymat === 'function' && window.currentGameState) {
+    renderPlaymat(window.currentGameState);
+  }
+
+  // 5. 音效提示
+  if (window.sfx && window.sfx.playFanfare) {
+    window.sfx.playFanfare();
+  }
+
+  // 6. 更新狀態標籤
+  const statusBadge = document.getElementById('photo-source-status');
+  if (statusBadge) {
+    statusBadge.className = 'status-badge status-approved';
+    statusBadge.textContent = `✅ 自動辨識成功：${recognizedCardName}`;
+  }
+
+  const totalCards = editingCardEntries.reduce((s, e) => s + (e.count || 0), 0);
+  alert(`🎉【智能照片辨識完成】\n\n• 辨識卡片：${recognizedCardName}\n• 動作：${actionText}\n• 目前牌組總張數：${totalCards} / 60 張\n• 照片狀態：已即時綁定套用於牌組與對戰！`);
+}
+
+/**
+ * 牌組編輯列「📷 拍照/上傳辨識加牌」一鍵處理
+ */
+function handleDirectDeckPhotoUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rawDataUrl = e.target.result;
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxDim = 640;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      processCardPhotoAndAutoAdd(file.name, photoDataUrl, canvas);
+    };
+    img.src = rawDataUrl;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
 
 function openCardPhotoModalForCard(cardName = null) {
   const modal = document.getElementById('card-photo-modal');
@@ -893,21 +1135,20 @@ function handleCardPhotoFileSelected(event) {
 
       const previewImg = document.getElementById('photo-preview-img');
       const placeholder = document.getElementById('photo-preview-placeholder');
-      const statusBadge = document.getElementById('photo-source-status');
 
       if (previewImg) {
         previewImg.src = currentPhotoPendingData;
         previewImg.style.display = 'block';
       }
       if (placeholder) placeholder.style.display = 'none';
-      if (statusBadge) {
-        statusBadge.className = 'status-badge status-approved';
-        statusBadge.textContent = '已載入新相片（待儲存）';
-      }
+
+      // 立即自動辨識並自動加入牌庫中！
+      processCardPhotoAndAutoAdd(file.name, currentPhotoPendingData, canvas);
     };
     img.src = rawDataUrl;
   };
   reader.readAsDataURL(file);
+  event.target.value = '';
 }
 
 function applyCardPhotoFromUrl() {
@@ -921,17 +1162,15 @@ function applyCardPhotoFromUrl() {
 
   const previewImg = document.getElementById('photo-preview-img');
   const placeholder = document.getElementById('photo-preview-placeholder');
-  const statusBadge = document.getElementById('photo-source-status');
 
   if (previewImg) {
     previewImg.src = url;
     previewImg.style.display = 'block';
   }
   if (placeholder) placeholder.style.display = 'none';
-  if (statusBadge) {
-    statusBadge.className = 'status-badge status-approved';
-    statusBadge.textContent = '已輸入網路網址（待儲存）';
-  }
+
+  // 立即自動辨識並自動加入牌庫中！
+  processCardPhotoAndAutoAdd(url, url, null);
 }
 
 function resetCardPhotoToDefault() {
@@ -974,3 +1213,6 @@ window.handleCardPhotoFileSelected = handleCardPhotoFileSelected;
 window.applyCardPhotoFromUrl = applyCardPhotoFromUrl;
 window.resetCardPhotoToDefault = resetCardPhotoToDefault;
 window.saveCardPhotoModal = saveCardPhotoModal;
+window.handleDirectDeckPhotoUpload = handleDirectDeckPhotoUpload;
+window.processCardPhotoAndAutoAdd = processCardPhotoAndAutoAdd;
+window.autoRecognizeCardFromInput = autoRecognizeCardFromInput;

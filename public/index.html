@@ -443,9 +443,13 @@
               <span>能量: <strong id="visual-count-energy">0</strong></span>
               <span>ACE SPEC: <strong id="visual-count-acespec">0</strong>/1</span>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button type="button" class="btn btn-accent btn-sm" id="btn-toggle-add-card">➕ 新增卡片</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-card-photos" onclick="openCardPhotoModalForCard()">📷 上傳卡牌照片</button>
+              <input type="file" id="direct-deck-photo-input" accept="image/*" style="display: none;" onchange="handleDirectDeckPhotoUpload(event)">
+              <button type="button" class="btn btn-warning btn-sm" id="btn-direct-upload-recognize" onclick="document.getElementById('direct-deck-photo-input').click()" title="選取卡片照片或拍照，立即自動辨識並加入牌庫！">
+                📷 拍照/上傳辨識加牌
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-card-photos" onclick="openCardPhotoModalForCard()">🖼️ 卡牌照片管理</button>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck-visual">🔍 智能辨識與規格驗證</button>
             </div>
           </div>
