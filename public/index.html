@@ -168,9 +168,9 @@
         <div class="glass-card">
           <div class="section-header">
             <div>
-              <h2 class="section-title">📤 上傳共同牌組（60張規範）</h2>
+              <h2 class="section-title">📤 編輯與建置共同牌組（60張規範）</h2>
               <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
-                獨立專屬的牌組建置中心：請選擇欲存入的共同牌組槽位（1~10組），挑選卡牌清單、調整數量，完成 60 張規格驗證後確認儲存！
+                獨立專屬的牌組建置中心：選擇下方 1~10 任一牌組槽位即可自由修改牌組名稱，並在符合寶可夢官方規則（總數60張、同名卡上限4張、ACE SPEC上限1張、至少1隻基礎寶可夢）下調整組成卡牌與數量！
               </p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -180,7 +180,7 @@
           </div>
 
           <div class="form-group" style="margin-top: 14px;">
-            <label style="font-weight: 700; color: #e2e8f0;">存入共同牌組槽位（上限 10 組）：</label>
+            <label style="font-weight: 700; color: #e2e8f0;">選擇要修改/建立的共同牌組槽位（1~10組）：</label>
             <select class="form-control" id="upload-slot-select" style="font-size: 1rem; padding: 10px 14px;">
               <option value="1">槽位 1</option>
               <option value="2">槽位 2</option>
@@ -196,7 +196,7 @@
           </div>
 
           <div class="form-group">
-            <label style="font-weight: 700; color: #e2e8f0;">牌組自訂名稱：</label>
+            <label style="font-weight: 700; color: #e2e8f0;">牌組名稱（可自由修改）：</label>
             <input type="text" class="form-control" id="upload-deck-name" placeholder="例如：超強噴火龍ex狂暴牌組" required>
           </div>
 
@@ -588,9 +588,12 @@
         <div id="deck-detail-summary-bar" class="deck-summary-bar" style="margin-bottom: 12px;"></div>
         <div id="deck-detail-cards-list" class="editor-cards-scroll" style="max-height: 420px;"></div>
       </div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
         <button class="btn btn-secondary" onclick="closeDeckDetailModal()">關閉</button>
-        <button class="btn btn-primary" id="deck-detail-battle-btn">⚔️ 使用此牌組對戰</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-accent" id="deck-detail-edit-btn">✏️ 修改名稱與卡牌</button>
+          <button class="btn btn-primary" id="deck-detail-battle-btn">⚔️ 使用此牌組對戰</button>
+        </div>
       </div>
     </div>
   </div>

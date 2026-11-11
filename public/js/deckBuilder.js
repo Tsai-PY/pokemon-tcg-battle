@@ -142,8 +142,9 @@ async function loadSharedDecks() {
             <div class="deck-stat-item" style="color: #34d399;">✓ 符合官方規範</div>
           </div>
           <div class="deck-actions">
+            <button class="btn btn-secondary btn-sm" onclick="editDeckInSlot(${slot})">✏️ 修改名稱與卡牌</button>
             <button class="btn btn-secondary btn-sm" onclick="viewDeckDetails(${slot})">🔍 查看內容</button>
-            <button class="btn btn-primary btn-sm" onclick="quickBattleWithDeck(${slot})">⚔️ 使用此牌組對戰</button>
+            <button class="btn btn-primary btn-sm" onclick="quickBattleWithDeck(${slot})">⚔️ 對戰</button>
           </div>
         `;
 
@@ -163,9 +164,9 @@ async function loadSharedDecks() {
         cardEl.innerHTML = `
           <div class="deck-slot-badge">槽位 ${slot} / 10</div>
           <h3 class="deck-title" style="color: #94a3b8;">空槽位</h3>
-          <p class="deck-description" style="color: #64748b;">尚未設定牌組。可至上方「上傳共同牌組」功能選單進行建置！</p>
+          <p class="deck-description" style="color: #64748b;">尚未設定牌組。可點選下方按鈕或至「上傳共同牌組」選單進行建置！</p>
           <div class="deck-actions" style="margin-top: auto;">
-            <span style="color: #64748b; font-size: 0.85rem;">（未設定牌組：請至「上傳共同牌組」選單建置）</span>
+            <button class="btn btn-accent btn-sm" onclick="editDeckInSlot(${slot})">➕ 建立/編輯此槽位牌組</button>
           </div>
         `;
       }
@@ -241,6 +242,11 @@ function editDeckInSlot(slot) {
     switchView('view-upload');
   }
   loadDeckIntoEditor(slot);
+  const nameInput = document.getElementById('upload-deck-name');
+  if (nameInput) {
+    nameInput.focus();
+    nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 function viewDeckDetails(slot) {
@@ -252,6 +258,7 @@ function viewDeckDetails(slot) {
   const summaryBar = document.getElementById('deck-detail-summary-bar');
   const list = document.getElementById('deck-detail-cards-list');
   const battleBtn = document.getElementById('deck-detail-battle-btn');
+  const editBtn = document.getElementById('deck-detail-edit-btn');
   if (!modal) return;
 
   title.textContent = `🔍 【槽位 ${slot}】${deck.name}`;
@@ -287,6 +294,13 @@ function viewDeckDetails(slot) {
     `;
     list.appendChild(row);
   });
+
+  if (editBtn) {
+    editBtn.onclick = () => {
+      closeDeckDetailModal();
+      editDeckInSlot(slot);
+    };
+  }
 
   if (battleBtn) {
     battleBtn.onclick = () => {
@@ -444,6 +458,7 @@ function adjustCardQuantity(index, delta) {
   const entry = editingCardEntries[index];
   const newCount = entry.count + delta;
   const isBasicEnergy = /^基本.*能量$/.test(entry.name);
+  const isAceSpec = /至尊|王牌|ace spec|希望護身符/i.test(entry.name);
 
   if (newCount <= 0) {
     if (confirm(`確定要將「${entry.name}」自牌組中移除嗎？`)) {
@@ -451,6 +466,9 @@ function adjustCardQuantity(index, delta) {
     } else {
       return;
     }
+  } else if (isAceSpec && newCount > 1) {
+    alert(`【特殊卡牌限制】\nACE SPEC（王牌卡）全牌組最多只能放入 1 張！`);
+    return;
   } else if (!isBasicEnergy && newCount > 4) {
     alert(`【同名卡限制】\n「${entry.name}」在牌庫中最多只能放 4 張！`);
     return;
@@ -529,6 +547,21 @@ function addNewCardFromPanel() {
   }
 
   const isBasicEnergy = /^基本.*能量$/.test(name);
+  const isAceSpec = /至尊|王牌|ace spec|希望護身符/i.test(name);
+
+  // ACE SPEC 限制檢查
+  if (isAceSpec) {
+    const existingAce = editingCardEntries.find(e => /至尊|王牌|ace spec|希望護身符/i.test(e.name));
+    if (existingAce && existingAce.name !== name) {
+      alert(`【特殊卡牌限制】\n全牌組最多只能放入 1 張 ACE SPEC 卡牌！（目前已有：「${existingAce.name}」）`);
+      return;
+    }
+    if (count > 1 || (existing && (existing.count + count) > 1)) {
+      alert(`【特殊卡牌限制】\nACE SPEC（王牌卡）全牌組最多只能放入 1 張！`);
+      return;
+    }
+  }
+
   const existing = editingCardEntries.find(e => e.name === name);
 
   if (existing) {
