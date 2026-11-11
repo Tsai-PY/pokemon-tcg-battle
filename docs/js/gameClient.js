@@ -480,11 +480,14 @@ function inspectCard(card, location, slotIndex = null) {
   }
 
   const cardImgUrl = (window.getCardImageUrl ? window.getCardImageUrl(card.name, card) : null);
-  const cardPhotoHtml = cardImgUrl ? `
-    <div style="width: 140px; flex-shrink: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.6); border: 2px solid #475569;">
-      <img src="${cardImgUrl}" alt="${card.name}" style="width: 100%; height: auto; display: block;" onerror="this.parentElement.style.display='none';" />
+  const cardPhotoHtml = `
+    <div style="width: 140px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
+      <div style="width: 140px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.6); border: 2px solid #475569;">
+        ${cardImgUrl ? `<img src="${cardImgUrl}" alt="${card.name}" style="width: 100%; height: auto; display: block;" onerror="this.parentElement.style.display='none';" />` : `<div style="height: 196px; display: flex; align-items: center; justify-content: center; font-size: 3rem; background: #0f172a;">${window.getCardArtEmoji ? window.getCardArtEmoji(card) : '🎴'}</div>`}
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="openCardPhotoModalForCard('${card.name}')" style="font-size: 0.75rem; padding: 4px 6px; width: 100%;">📷 更換照片</button>
     </div>
-  ` : '';
+  `;
 
   const guide = (window.getCardUsageGuide ? window.getCardUsageGuide(card) : null);
   const guideHtml = guide ? `

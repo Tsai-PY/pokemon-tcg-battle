@@ -773,8 +773,18 @@ function openCardPhotoModalForCard(cardName = null) {
   if (!modal || !select) return;
 
   const optionsSet = new Set();
-  editingCardEntries.forEach(e => optionsSet.add(e.name));
-  POPULAR_CARDS.forEach(p => optionsSet.add(p.name));
+  if (cardName) optionsSet.add(cardName);
+  (editingCardEntries || []).forEach(e => {
+    if (e && e.name) optionsSet.add(e.name);
+  });
+  if (typeof POPULAR_CARDS_CATALOG !== 'undefined') {
+    POPULAR_CARDS_CATALOG.forEach(group => {
+      (group.cards || []).forEach(cName => optionsSet.add(cName));
+    });
+  }
+  if (typeof OFFICIAL_CARD_IMAGES !== 'undefined') {
+    Object.keys(OFFICIAL_CARD_IMAGES).forEach(name => optionsSet.add(name));
+  }
 
   select.innerHTML = '';
   optionsSet.forEach(name => {
@@ -790,12 +800,16 @@ function openCardPhotoModalForCard(cardName = null) {
   currentPhotoPendingData = '';
 
   updatePhotoModalPreview();
+  modal.classList.add('active');
   modal.style.display = 'flex';
 }
 
 function closeCardPhotoModal() {
   const modal = document.getElementById('card-photo-modal');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
   currentPhotoPendingData = '';
 }
 
@@ -927,7 +941,8 @@ function resetCardPhotoToDefault() {
   }
   currentPhotoPendingData = '';
   updatePhotoModalPreview();
-  renderEditingCardRows();
+  if (typeof renderEditingCardRows === 'function') renderEditingCardRows();
+  if (typeof renderPlaymat === 'function' && window.currentGameState) renderPlaymat(window.currentGameState);
   alert(`已將【${currentPhotoCardName}】恢復為官方預設圖案！`);
 }
 
@@ -938,7 +953,8 @@ function saveCardPhotoModal() {
       window.saveCustomCardImage(currentPhotoCardName, currentPhotoPendingData);
     }
   }
-  renderEditingCardRows();
+  if (typeof renderEditingCardRows === 'function') renderEditingCardRows();
+  if (typeof renderPlaymat === 'function' && window.currentGameState) renderPlaymat(window.currentGameState);
   closeCardPhotoModal();
   alert(`已成功更新【${currentPhotoCardName}】的卡牌照片！已即時套用於牌組與對戰！`);
 }
