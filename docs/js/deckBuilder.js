@@ -58,7 +58,7 @@ function populateCardSelectDropdowns() {
   const swapSelect = document.getElementById('swap-card-select');
 
   const buildOptions = () => {
-    let html = '<option value="">-- 請選擇卡牌 --</option>';
+    let html = '<option value="">-- 請從全部牌組庫選擇卡牌 --</option>';
     POPULAR_CARDS_CATALOG.forEach(group => {
       html += `<optgroup label="${group.category}">`;
       group.cards.forEach(card => {
@@ -66,6 +66,23 @@ function populateCardSelectDropdowns() {
       });
       html += `</optgroup>`;
     });
+
+    try {
+      const customStored = localStorage.getItem('ptcg_custom_library_cards');
+      if (customStored) {
+        const customList = JSON.parse(customStored);
+        if (Array.isArray(customList) && customList.length > 0) {
+          html += `<optgroup label="★ 玩家自訂收錄卡牌">`;
+          customList.forEach(c => {
+            if (c && c.name) {
+              html += `<option value="${c.name}">${c.name} (${c.categoryLabel || '自訂'})</option>`;
+            }
+          });
+          html += `</optgroup>`;
+        }
+      }
+    } catch (e) {}
+
     return html;
   };
 
@@ -146,9 +163,9 @@ async function loadSharedDecks() {
         cardEl.innerHTML = `
           <div class="deck-slot-badge">槽位 ${slot} / 10</div>
           <h3 class="deck-title" style="color: #94a3b8;">空槽位</h3>
-          <p class="deck-description" style="color: #64748b;">尚未設定牌組。可至上方「上傳共同牌庫」功能選單進行建置！</p>
+          <p class="deck-description" style="color: #64748b;">尚未設定牌組。可至上方「上傳共同牌組」功能選單進行建置！</p>
           <div class="deck-actions" style="margin-top: auto;">
-            <span style="color: #64748b; font-size: 0.85rem;">（未設定牌組：請至「上傳共同牌庫」選單建置）</span>
+            <span style="color: #64748b; font-size: 0.85rem;">（未設定牌組：請至「上傳共同牌組」選單建置）</span>
           </div>
         `;
       }
@@ -392,7 +409,7 @@ function renderEditingCardRows() {
     row.className = 'editor-card-row';
     row.innerHTML = `
       <div class="editor-card-info">
-        <div class="editor-card-thumb-wrap" onclick="openCardPhotoModalForCard('${entry.name}')" title="點擊上傳/更換照片">
+        <div class="editor-card-thumb-wrap" title="${entry.name}">
           ${imgUrl ? `<img src="${imgUrl}" class="editor-card-thumb" alt="${entry.name}" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline';" />` : ''}
           <span class="editor-card-emoji" style="${imgUrl ? 'display:none;' : ''}">${emoji}</span>
         </div>
@@ -410,11 +427,10 @@ function renderEditingCardRows() {
           <button type="button" class="btn-qty" onclick="adjustCardQuantity(${idx}, 1)" title="增加數量" ${(!isBasicEnergy && entry.count >= 4) ? 'disabled' : ''}>+</button>
         </div>
 
-        <!-- Row Actions: Photo, Swap & Delete -->
+        <!-- Row Actions: Swap & Delete -->
         <div class="editor-row-actions">
-          <button type="button" class="btn-photo-card" onclick="openCardPhotoModalForCard('${entry.name}')" title="上傳或更換此卡片照片">📷 換圖</button>
-          <button type="button" class="btn-swap-card" onclick="openSwapCardPanel(${idx})">🔄 更換</button>
-          <button type="button" class="btn-delete-card" onclick="deleteCardRow(${idx})" title="刪除此卡片">🗑️</button>
+          <button type="button" class="btn-swap-card" onclick="openSwapCardPanel(${idx})" title="從全部牌組庫挑選其他卡牌更換">🔄 更換</button>
+          <button type="button" class="btn-delete-card" onclick="deleteCardRow(${idx})" title="從此牌組移除此卡片">🗑️</button>
         </div>
       </div>
     `;
@@ -476,12 +492,11 @@ function openSwapCardPanel(index) {
 function confirmSwapCard() {
   if (swapTargetIndex < 0 || !editingCardEntries[swapTargetIndex]) return;
   const select = document.getElementById('swap-card-select');
-  const customInput = document.getElementById('swap-card-custom-name');
   const panel = document.getElementById('swap-card-panel');
 
-  const newName = (customInput && customInput.value.trim()) || (select && select.value) || '';
+  const newName = (select && select.value) || '';
   if (!newName) {
-    alert('請從下拉選單選擇卡牌，或手動輸入新卡片名稱！');
+    alert('請從全部牌組庫選單中選擇要更換的卡牌！');
     return;
   }
 
@@ -502,15 +517,14 @@ function cancelSwapCard() {
 
 function addNewCardFromPanel() {
   const select = document.getElementById('add-card-select');
-  const customInput = document.getElementById('add-card-custom-name');
   const countInput = document.getElementById('add-card-count');
   const panel = document.getElementById('add-card-panel');
 
-  const name = (customInput && customInput.value.trim()) || (select && select.value) || '';
+  const name = (select && select.value) || '';
   const count = parseInt(countInput ? countInput.value : 1, 10) || 1;
 
   if (!name) {
-    alert('請選擇熱門卡牌或輸入自訂卡片名稱！');
+    alert('請從全部牌組庫中挑選卡牌！\n（如欲新增未收錄的全新卡牌，請前往「全部牌組庫」進行收錄）');
     return;
   }
 
@@ -657,7 +671,7 @@ async function parseAndValidateDeck(interactive = false) {
         confirmBtn.style.opacity = '1';
       }
       if (interactive) {
-        alert('🎉 恭喜！智能辨識與規格驗證全部通過！\n\n• 總牌數：剛好 60 張卡牌\n• 同名卡限制：合格（無超過4張之卡牌）\n• ACE SPEC限制：合格\n• 基礎寶可夢：合格\n\n您可以點擊下方「確認儲存到共同牌庫」儲存牌組！');
+        alert('🎉 恭喜！智能辨識與規格驗證全部通過！\n\n• 總牌數：剛好 60 張卡牌\n• 同名卡限制：合格（無超過4張之卡牌）\n• ACE SPEC限制：合格\n• 基礎寶可夢：合格\n\n您可以點擊下方「確認儲存到共同牌組」儲存牌組！');
       }
     } else {
       if (badge) {
@@ -717,7 +731,7 @@ async function submitDeckUpload() {
       return;
     }
 
-    alert(`🎉 恭喜！牌組「${name}」已成功儲存至共同牌庫第 ${slot} 組！\n對戰雙方皆可立即選用進行對戰！`);
+    alert(`🎉 恭喜！牌組「${name}」已成功儲存至共同牌組第 ${slot} 組！\n對戰雙方皆可立即選用進行對戰！`);
     const modal = document.getElementById('deck-modal');
     if (modal) modal.classList.remove('active');
     await loadSharedDecks();

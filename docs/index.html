@@ -20,8 +20,9 @@
     </div>
 
     <nav class="nav-links" id="main-nav" style="display: none;">
-      <button class="nav-btn active" data-view="view-decks">🎴 共同牌庫 (10組)</button>
-      <button class="nav-btn" data-view="view-upload">📤 上傳共同牌庫</button>
+      <button class="nav-btn active" data-view="view-decks">🎴 共同牌組 (10組)</button>
+      <button class="nav-btn" data-view="view-card-library">📚 全部牌組庫</button>
+      <button class="nav-btn" data-view="view-upload">📤 上傳共同牌組</button>
       <button class="nav-btn" data-view="view-match">⚔️ 開始對戰</button>
       <button class="nav-btn" data-view="view-admin" id="nav-admin-btn" style="display: none;">👑 管理員審核</button>
     </nav>
@@ -92,18 +93,18 @@
       </div>
     </section>
 
-    <!-- 2. SHARED DECKS VIEW (共同牌庫清單) -->
+    <!-- 2. SHARED DECKS VIEW (共同牌組清單) -->
     <section id="view-decks" class="view-section">
       <div class="panel-container">
         <div class="glass-card">
           <div class="section-header">
             <div>
-              <h2 class="section-title">🎴 系統共同牌庫（共 10 組）</h2>
+              <h2 class="section-title">🎴 系統共同牌組（共 10 組）</h2>
               <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
-                系統提供對戰雙方自由選用之標準 60 張牌庫。欲建立或上傳新牌庫，請使用上方「📤 上傳共同牌庫」功能選單。
+                系統提供對戰雙方自由選用之標準 60 張牌組。欲建立或上傳新牌組，請使用上方「📤 上傳共同牌組」功能選單；欲瀏覽或擴充全遊戲卡牌，請使用「📚 全部牌組庫」。
               </p>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="loadSharedDecks()">🔄 重新整理牌庫</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadSharedDecks()">🔄 重新整理牌組</button>
           </div>
 
           <!-- 10 Shared Decks Grid -->
@@ -114,15 +115,62 @@
       </div>
     </section>
 
-    <!-- 2.5 UPLOAD DECK VIEW (獨立上傳共同牌庫功能選單) -->
+    <!-- 2.3 ALL CARDS LIBRARY VIEW (全部牌組庫) -->
+    <section id="view-card-library" class="view-section">
+      <div class="panel-container">
+        <div class="glass-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">📚 全部牌組庫（遊戲全卡牌庫）</h2>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                本遊戲完整收錄之所有寶可夢、訓練家（支援者/物品/道具）與能量卡牌庫。可在此瀏覽卡牌圖鑑、檢視出牌說明、上傳新卡牌入庫或更換真實卡牌照片！
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <input type="file" id="library-card-photo-input" accept="image/*" style="display: none;" onchange="handleLibraryCardPhotoUpload(event)">
+              <button type="button" class="btn btn-warning btn-sm" onclick="document.getElementById('library-card-photo-input').click()" title="選取卡片照片或拍照，立即自動辨識並收錄到全部牌組庫！">
+                📷 拍照/上傳卡牌自動收錄
+              </button>
+              <button type="button" class="btn btn-accent btn-sm" onclick="openAddCardToLibraryModal()">
+                ➕ 上傳/收錄新卡牌
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openCardPhotoModalForCard()">
+                🖼️ 卡牌照片管理
+              </button>
+            </div>
+          </div>
+
+          <!-- Search and Filter Bar -->
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; margin-bottom: 16px;">
+            <div style="flex: 1; min-width: 220px; position: relative;">
+              <input type="text" class="form-control" id="card-library-search-input" placeholder="🔍 搜尋卡牌名稱、招式或效果..." oninput="filterCardLibrary()">
+            </div>
+            <div class="filter-pills" style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="filter-btn active" data-filter="all" onclick="filterCardLibraryCategory('all')">全部 (<span id="lib-count-all">0</span>)</button>
+              <button class="filter-btn" data-filter="pokemon" onclick="filterCardLibraryCategory('pokemon')">🐾 寶可夢 (<span id="lib-count-pokemon">0</span>)</button>
+              <button class="filter-btn" data-filter="supporter" onclick="filterCardLibraryCategory('supporter')">👤 支援者 (<span id="lib-count-supporter">0</span>)</button>
+              <button class="filter-btn" data-filter="item" onclick="filterCardLibraryCategory('item')">🎒 物品/道具 (<span id="lib-count-item">0</span>)</button>
+              <button class="filter-btn" data-filter="energy" onclick="filterCardLibraryCategory('energy')">⚡ 能量 (<span id="lib-count-energy">0</span>)</button>
+            </div>
+          </div>
+
+          <!-- Cards Grid -->
+          <div class="card-library-grid" id="card-library-grid-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2.5 UPLOAD DECK VIEW (獨立上傳共同牌組功能選單) -->
     <section id="view-upload" class="view-section">
       <div class="panel-container">
         <div class="glass-card">
           <div class="section-header">
             <div>
-              <h2 class="section-title">📤 上傳共同牌庫（60張規範）</h2>
+              <h2 class="section-title">📤 上傳共同牌組（60張規範）</h2>
               <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
-                獨立專屬的牌庫建置中心：請選擇欲存入的共同牌庫槽位（1~10組），編輯卡牌清單、調整數量、拍照或上傳卡片自動辨識，完成規格驗證後確認儲存！
+                獨立專屬的牌組建置中心：請選擇欲存入的共同牌組槽位（1~10組），挑選卡牌清單、調整數量，完成 60 張規格驗證後確認儲存！
               </p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -132,7 +180,7 @@
           </div>
 
           <div class="form-group" style="margin-top: 14px;">
-            <label style="font-weight: 700; color: #e2e8f0;">存入共同牌庫槽位（上限 10 組）：</label>
+            <label style="font-weight: 700; color: #e2e8f0;">存入共同牌組槽位（上限 10 組）：</label>
             <select class="form-control" id="upload-slot-select" style="font-size: 1rem; padding: 10px 14px;">
               <option value="1">槽位 1</option>
               <option value="2">槽位 2</option>
@@ -179,12 +227,7 @@
                 <span>ACE SPEC: <strong id="visual-count-acespec">0</strong>/1</span>
               </div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button type="button" class="btn btn-accent btn-sm" id="btn-toggle-add-card">➕ 新增卡片</button>
-                <input type="file" id="direct-deck-photo-input" accept="image/*" style="display: none;" onchange="handleDirectDeckPhotoUpload(event)">
-                <button type="button" class="btn btn-warning btn-sm" id="btn-direct-upload-recognize" onclick="document.getElementById('direct-deck-photo-input').click()" title="選取卡片照片或拍照，立即自動辨識並加入牌庫！">
-                  📷 拍照/上傳辨識加牌
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-card-photos" onclick="openCardPhotoModalForCard()">🖼️ 卡牌照片管理</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-toggle-add-card">📥 從全部牌組庫挑選卡牌加入此牌組</button>
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck-visual">🔍 智能辨識與規格驗證</button>
               </div>
             </div>
@@ -193,17 +236,19 @@
             <div class="add-card-box" id="add-card-panel" style="display: none;">
               <div style="display: flex; gap: 8px; flex: 1; min-width: 260px;">
                 <select class="form-control" id="add-card-select" style="flex: 1;">
-                  <option value="">-- 快速從牌庫選擇熱門卡牌 --</option>
+                  <option value="">-- 請從全部牌組庫選擇卡牌 --</option>
                   <!-- Populated dynamically by JS -->
                 </select>
-                <input type="text" class="form-control" id="add-card-custom-name" placeholder="或手動輸入自訂卡名" style="flex: 1;">
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
                 <label style="font-size: 0.85rem; color: #94a3b8; margin: 0;">數量:</label>
-                <input type="number" class="form-control" id="add-card-count" min="1" max="59" value="1" style="width: 65px; text-align: center;">
+                <input type="number" class="form-control" id="add-card-count" min="1" max="4" value="1" style="width: 65px; text-align: center;">
               </div>
-              <button type="button" class="btn btn-success btn-sm" id="btn-confirm-add-card">確認加入</button>
+              <button type="button" class="btn btn-success btn-sm" id="btn-confirm-add-card">確認加入牌組</button>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-add-card">關閉</button>
+              <div style="width: 100%; font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">
+                💡 欲新增未收錄之全新卡牌或拍照上傳照片，請前往頂部「<a href="javascript:void(0)" onclick="switchView('view-card-library')" style="color: #38bdf8; text-decoration: underline;">📚 全部牌組庫</a>」。
+              </div>
             </div>
 
             <!-- Card Swap Panel -->
@@ -212,7 +257,6 @@
               <select class="form-control" id="swap-card-select" style="flex: 1; min-width: 200px;">
                 <!-- Populated dynamically by JS -->
               </select>
-              <input type="text" class="form-control" id="swap-card-custom-name" placeholder="或輸入自訂新卡名" style="flex: 1; min-width: 160px;">
               <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-swap-card">確認更換</button>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-swap-card">取消</button>
             </div>
@@ -250,8 +294,8 @@
 
           <!-- Action Footer inside the card -->
           <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #334155;">
-            <button class="btn btn-secondary" id="btn-return-decks" onclick="switchView('view-decks')">返回共同牌庫清單</button>
-            <button class="btn btn-success" id="confirm-upload-btn" style="font-size: 1rem; padding: 10px 24px;">確認儲存到共同牌庫</button>
+            <button class="btn btn-secondary" id="btn-return-decks" onclick="switchView('view-decks')">返回共同牌組清單</button>
+            <button class="btn btn-success" id="confirm-upload-btn" style="font-size: 1rem; padding: 10px 24px;">確認儲存到共同牌組</button>
           </div>
         </div>
       </div>
@@ -611,6 +655,51 @@
     </div>
   </div>
 
+  <!-- Modal: Upload / Add New Card to Library (上傳收錄新卡牌至全部牌組庫) -->
+  <div class="modal-overlay" id="add-card-library-modal" style="z-index: 2250;">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ 上傳與收錄新卡牌至全部牌組庫</h3>
+        <button class="modal-close" onclick="closeAddCardToLibraryModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>卡牌名稱：</label>
+          <input type="text" class="form-control" id="new-card-name" placeholder="例如：月亮伊布VMAX 或 捷克羅姆" required>
+        </div>
+        <div class="form-group">
+          <label>卡牌分類：</label>
+          <select class="form-control" id="new-card-category">
+            <option value="pokemon">🐾 寶可夢 (Pokémon)</option>
+            <option value="supporter">👤 訓練家 - 支援者 (Supporter)</option>
+            <option value="item">🎒 訓練家 - 物品/道具 (Item/Tool)</option>
+            <option value="acespec">👑 王牌卡 (ACE SPEC)</option>
+            <option value="energy">⚡ 能量卡 (Energy)</option>
+          </select>
+        </div>
+        <div class="form-group" id="new-card-hp-group">
+          <label>HP 數值（若為寶可夢）：</label>
+          <input type="number" class="form-control" id="new-card-hp" placeholder="例如：280" value="120">
+        </div>
+        <div class="form-group">
+          <label>招式或卡牌效果說明：</label>
+          <textarea class="form-control" id="new-card-effect" rows="3" placeholder="例如：【暗黑波動】造成此寶可夢身上的惡能量數量×30點傷害。"></textarea>
+        </div>
+        <div class="form-group">
+          <label>卡牌照片（選填，可拍照或上傳圖檔）：</label>
+          <input type="file" id="new-card-photo-file" accept="image/*" class="form-control" onchange="previewNewCardPhotoFile(event)">
+          <div id="new-card-photo-preview-wrap" style="display: none; margin-top: 10px; text-align: center;">
+            <img id="new-card-photo-preview" src="" style="max-width: 120px; max-height: 160px; border-radius: 6px; border: 1px solid #475569;" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeAddCardToLibraryModal()">取消</button>
+        <button type="button" class="btn btn-success" onclick="saveNewCardToLibrary()">💾 確認收錄入庫</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Card Action & Detail Popup -->
   <div class="card-detail-popup" id="card-action-popup">
     <div class="card-detail-card" id="card-action-content">
@@ -688,6 +777,7 @@
   <script>if (typeof Peer === 'undefined') { document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>'); }</script>
   <script src="js/standaloneEngine.js?v=20261111_01"></script>
   <script src="js/cardAssets.js?v=20261111_01"></script>
+  <script src="js/cardLibrary.js?v=20261111_02"></script>
   <script src="js/deckBuilder.js?v=20261111_01"></script>
   <script src="js/admin.js?v=20261111_01"></script>
   <script src="js/gameClient.js?v=20261111_01"></script>
