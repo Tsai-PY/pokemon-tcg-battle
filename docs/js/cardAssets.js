@@ -66,7 +66,26 @@ const POKEMON_ART_EMOJIS = {
   '大地之器': '🏺',
   '至尊捕捉器': '👑',
   '勇氣護符': '🛡️',
-  '超級能量回收棒': '🎣'
+  '超級能量回收棒': '🎣',
+  '希望護身符': '⭐🛡️',
+  '火箭隊的鈴鐺響': '🔔🚀',
+  '寶可夢交換': '🔄',
+  '聖灰': '🏺✨',
+  '米可利': '🌊👑',
+  '莉莉艾的決意': '🌸',
+  '厲害釣竿': '🎣',
+  '招式學習演進': '📜⚡',
+  '雪童子': '❄️',
+  '噴射能量': '🌀⚡',
+  '水君V': '💧🐺',
+  '裁判': '⚖️',
+  '寶可夢平板': '📱',
+  '麻花犬EX': '🍞🐾',
+  '麻花犬ex': '🍞🐾',
+  '狗仔包': '🥖',
+  '火箭隊的謎擬Q': '👻🚀',
+  '真菰': '👩‍🔬',
+  '超級雪妖女ex': '❄️👘'
 };
 
 // Official Authentic PTCG Card Images Directory
@@ -151,7 +170,28 @@ const OFFICIAL_CARD_IMAGES = {
   '基本超能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_005_R_EN_MD.png',
   '基本草能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_001_R_EN_MD.png',
   '基本惡能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_007_R_EN_MD.png',
-  '基本鋼能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_008_R_EN_MD.png'
+  '基本鋼能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_008_R_EN_MD.png',
+
+  // Newly Added Cards
+  '希望護身符': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SSP/SSP_162_R_EN_MD.png',
+  '火箭隊的鈴鐺響': 'https://asia.pokemon-card.com/tw/card-img/tw00010995.png',
+  '寶可夢交換': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_194_R_EN_MD.png',
+  '聖灰': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FLF/FLF_096_R_EN_MD.png',
+  '米可利': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_166_R_EN_MD.png',
+  '莉莉艾的決意': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_196_R_EN_MD.png',
+  '厲害釣竿': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAL/PAL_188_R_EN_MD.png',
+  '招式學習演進': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAR/PAR_178_R_EN_MD.png',
+  '雪童子': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAR/PAR_037_R_EN_MD.png',
+  '噴射能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAL/PAL_190_R_EN_MD.png',
+  '水君V': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/EVS/EVS_031_R_EN_MD.png',
+  '裁判': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_176_R_EN_MD.png',
+  '寶可夢平板': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SSP/SSP_170_R_EN_MD.png',
+  '麻花犬EX': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SCR/SCR_067_R_EN_MD.png',
+  '麻花犬ex': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SCR/SCR_067_R_EN_MD.png',
+  '狗仔包': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_098_R_EN_MD.png',
+  '火箭隊的謎擬Q': 'https://asia.pokemon-card.com/tw/card-img/tw00010996.png',
+  '真菰': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/BLW/BLW_097_R_EN_MD.png',
+  '超級雪妖女ex': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_054_R_EN_MD.png'
 };
 
 // Retrieve custom card images uploaded by user (persisted in localStorage)
@@ -979,6 +1019,177 @@ const CARD_USAGE_GUIDES = {
     effectText: 'HP 130。超屬性光輝寶可夢。【特性：勺子彎曲】在自己的回合，可將場上對手寶可夢身上的最多 2 個傷害指示物（20傷害），自由移動到對手另一隻寶可夢身上！',
     timingText: '全牌組僅限放入 1 張「光輝」寶可夢。直接置於備戰區。',
     tacticsTip: '補刀神技！將多餘的過剩傷害轉移給對手殘血怪，直接完成收頭拿下獎賞卡！'
+  },
+  '希望護身符': {
+    categoryBadge: '⭐ 【ACE SPEC】王牌道具',
+    categoryClass: 'guide-badge-acespec',
+    timingBadge: '牌組限放1張 · 氣絕檢索',
+    timingClass: 'guide-badge-acespec',
+    effectText: '【ACE SPEC】附有這張卡的寶可夢，受到對手的寶可夢招式的傷害而【昏厥】時，從自己的牌庫任意選擇最多 3 張卡加入手牌，重洗牌庫。',
+    timingText: '【主要階段】附在場上的寶可夢身上。每隻寶可夢限攜帶 1 張道具，全牌組限放 1 張 ACE SPEC。',
+    tacticsTip: '頂級防禦威懾王牌！附在主力身上，一旦對手擊殺它，立即無條件從牌庫抓 3 張任意關鍵牌（如打手、填能、老大的指令）瞬間滿血復仇反擊！'
+  },
+  '火箭隊的鈴鐺響': {
+    categoryBadge: '⭐ 基礎寶可夢',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '直接置於備戰區',
+    timingClass: 'guide-badge-timing',
+    effectText: 'HP 30。超屬性基礎寶可夢。招式【鈴鈴吵鬧】（無色能量）：在不看正面的情況下，從對手手牌隨機選擇 1 張將其丟棄！',
+    timingText: '【主要階段】備戰區未滿 5 隻時直接放置。',
+    tacticsTip: '極度惡劣的手牌破壞騷擾手！1 顆能量盲拆對手手牌，打亂對手下回合的進攻計畫。'
+  },
+  '寶可夢交換': {
+    categoryBadge: '🎒 物品卡',
+    categoryClass: 'guide-badge-item',
+    timingBadge: '解除異常 · 戰鬥換位',
+    timingClass: 'guide-badge-timing',
+    effectText: '將自己的戰鬥寶可夢與備戰區的 1 隻寶可夢互換位置。',
+    timingText: '在自己的回合【主要階段】使用，備戰區必須至少有 1 隻寶可夢。',
+    tacticsTip: '0 撤退費用換位神卡！瞬間解除所有戰鬥異常狀態，並讓後排主力無損上陣攻擊。'
+  },
+  '聖灰': {
+    categoryBadge: '🎒 物品卡',
+    categoryClass: 'guide-badge-item',
+    timingBadge: '資源大回收 · 洗回牌庫',
+    timingClass: 'guide-badge-timing',
+    effectText: '從自己的棄牌區選擇最多 5 張寶可夢卡，給對手看過後洗回自己的牌庫。',
+    timingText: '在自己的回合【主要階段】使用。',
+    tacticsTip: '超大量的寶可夢資源續航！一次將多達 5 隻被擊倒的主力與進化鏈洗回牌庫，避免牌庫抽乾或主力斷檔。'
+  },
+  '米可利': {
+    categoryBadge: '👤 支援者卡',
+    categoryClass: 'guide-badge-supporter',
+    timingBadge: '每回合限用1張 · 先攻首回不可',
+    timingClass: 'guide-badge-timing',
+    effectText: '從自己的牌庫抽取 3 張卡。若自己的戰鬥寶可夢為水屬性，則改為抽取 4 張卡！',
+    timingText: '在自己的回合【主要階段】使用，每回合限用 1 張支援者。',
+    tacticsTip: '水屬性隊伍專屬強效過牌手，配合古劍豹ex或水君V在戰鬥場時可穩定補充 4 張手牌！'
+  },
+  '莉莉艾的決意': {
+    categoryBadge: '👤 支援者卡',
+    categoryClass: 'guide-badge-supporter',
+    timingBadge: '開局暴抽8張 · 手牌洗牌',
+    timingClass: 'guide-badge-timing',
+    effectText: '將自己的手牌全部洗回牌庫並重洗。然後從牌庫抽出 6 張卡；若自己剩餘獎賞卡張數為 6 張（開局時），則改為抽出 8 張卡！',
+    timingText: '在自己的回合【主要階段】使用，每回合限用 1 張支援者。',
+    tacticsTip: '開局第一動或前期極致手牌補充神卡！在滿獎賞卡狀態下直接抽滿 8 張新資源，極速展開全場陣容。'
+  },
+  '厲害釣竿': {
+    categoryBadge: '🎒 物品卡',
+    categoryClass: 'guide-badge-item',
+    timingBadge: '資源循環 · 洗回牌庫',
+    timingClass: 'guide-badge-timing',
+    effectText: '從自己的棄牌區選擇「寶可夢卡」與「基本能量卡」合計最多 3 張，給對手看後洗回自己的牌庫。',
+    timingText: '在自己的回合【主要階段】使用。',
+    tacticsTip: '環境必備的續航神卡！回收核心打手與能量回牌庫，配合檢索手段反覆使用。'
+  },
+  '招式學習演進': {
+    categoryBadge: '🛡️ 寶可夢道具卡',
+    categoryClass: 'guide-badge-tool',
+    timingBadge: '每隻限攜帶1張 · 回合結束丟棄',
+    timingClass: 'guide-badge-timing',
+    effectText: '【寶可夢道具】附有這張卡的寶可夢可以使用招式【演進】（無色能量）：從自己的牌庫選擇最多 2 隻備戰寶可夢，各自選擇對應的進化卡直接放置其上完成進化！在自己的回合結束時丟棄此卡。',
+    timingText: '【主要階段】附在場上的寶可夢身上。',
+    tacticsTip: '後攻第一回合神技！使用 1 顆能量直接在後排同時進化 2 隻寶可夢（如波波變比比鳥、小火龍變火恐龍），比神奇糖果還穩定防截斷！'
+  },
+  '雪童子': {
+    categoryBadge: '⭐ 基礎寶可夢',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '直接置於備戰區',
+    timingClass: 'guide-badge-timing',
+    effectText: 'HP 60。水屬性基礎寶可夢。招式【驚嚇】（水能量，20傷害）：在不看正面的情況下，從對手手牌隨機選 1 張查看後洗回對手牌庫！可進化為超級雪妖女ex。',
+    timingText: '【主要階段】直接置於備戰區。',
+    tacticsTip: '起手騷擾對手關鍵手牌，並為後續進化「超級雪妖女ex」做好準備。'
+  },
+  '噴射能量': {
+    categoryBadge: '🌀 特殊能量卡',
+    categoryClass: 'guide-badge-energy',
+    timingBadge: '手貼強制換位',
+    timingClass: 'guide-badge-acespec',
+    effectText: '只要這張卡附於寶可夢身上，視為提供 1 個無色能量。當從手牌附於「備戰寶可夢」身上時，必須將該備戰寶可夢與自己的戰鬥寶可夢互換！',
+    timingText: '【主要階段】每回合限手動貼 1 張能量。',
+    tacticsTip: '填能與換位合二為一的神卡！不用消耗交替物品卡，直接為後排打手貼能量並瞬間切換至戰鬥場立即進攻！'
+  },
+  '水君V': {
+    categoryBadge: '💧 基礎寶可夢 (V)',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '瞬步過牌 · 昏厥拿2張獎賞卡',
+    timingClass: 'guide-badge-acespec',
+    effectText: 'HP 210。水屬性基礎寶可夢V。【特性：瞬步】在戰鬥場時，每回合可抽 1 張卡。【招式：暴雪迴旋曲】（水無能量，20+傷害）：雙方備戰寶可夢數量 × 20 點追加傷害（滿編時高達 220 傷害）！',
+    timingText: '【主要階段】直接從手牌置於場上。',
+    tacticsTip: '極度靈活的高速水系打手！自帶每回合免費抽牌特性，且僅需 2 顆能量就能配合雙方鋪場打出 220 點高額爆發！'
+  },
+  '裁判': {
+    categoryBadge: '👤 支援者卡',
+    categoryClass: 'guide-badge-supporter',
+    timingBadge: '雙向洗手牌 · 限制4張',
+    timingClass: 'guide-badge-timing',
+    effectText: '雙方玩家各自將全部手牌洗回牌庫。接著，雙方各自從牌庫頂部抽取 4 張卡。',
+    timingText: '在自己的回合【主要階段】使用，每回合限用 1 張支援者。',
+    tacticsTip: '極強的手牌壓制牌！當對手手牌大量囤積（如 7~10 張）時使用，瞬間將其手牌強制削減至 4 張，大幅壓制對手展開。'
+  },
+  '寶可夢平板': {
+    categoryBadge: '🎒 物品卡',
+    categoryClass: 'guide-badge-item',
+    timingBadge: '非規則寶可夢精準檢索',
+    timingClass: 'guide-badge-timing',
+    effectText: '從自己的牌庫選擇 1 張「非規則寶可夢」（非 ex、非 V、非輝耀）加入手牌，重洗牌庫。',
+    timingText: '在自己的回合【主要階段】使用，不限次數。',
+    tacticsTip: '非規則隊伍或輔助怪（如大比鳥進化前、奇魯莉安、始祖大鳥、夜巡靈等）的無消耗精準檢索神卡！'
+  },
+  '麻花犬EX': {
+    categoryBadge: '🍞 1 階進化寶可夢 (ex)',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '全隊滿血神級恢復 · 昏厥拿2張獎賞卡',
+    timingClass: 'guide-badge-acespec',
+    effectText: 'HP 250。超屬性 1 階寶可夢ex。重疊在狗仔包身上進化。【特性：飽腹時間】從手牌進化登場時，將自己所有進化寶可夢的 HP 完全恢復！然後將恢復寶可夢身上的能量全部丟棄。【招式：奇跡閃耀】（無無能量，130傷害）：使對手戰鬥寶可夢混亂。',
+    timingText: '由狗仔包進化。',
+    tacticsTip: '全隊瞬間滿血的超強急救神犬！在噴火龍ex、沙奈朵ex等大怪殘血時進化，瞬間清除全部傷害指示物，直接讓對手的攻擊化為烏有！'
+  },
+  '麻花犬ex': {
+    categoryBadge: '🍞 1 階進化寶可夢 (ex)',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '全隊滿血神級恢復 · 昏厥拿2張獎賞卡',
+    timingClass: 'guide-badge-acespec',
+    effectText: 'HP 250。超屬性 1 階寶可夢ex。重疊在狗仔包身上進化。【特性：飽腹時間】從手牌進化登場時，將自己所有進化寶可夢的 HP 完全恢復！然後將恢復寶可夢身上的能量全部丟棄。【招式：奇跡閃耀】（無無能量，130傷害）：使對手戰鬥寶可夢混亂。',
+    timingText: '由狗仔包進化。',
+    tacticsTip: '全隊瞬間滿血的超強急救神犬！在噴火龍ex、沙奈朵ex等大怪殘血時進化，瞬間清除全部傷害指示物，直接讓對手的攻擊化為烏有！'
+  },
+  '狗仔包': {
+    categoryBadge: '⭐ 基礎寶可夢',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '直接置於備戰區',
+    timingClass: 'guide-badge-timing',
+    effectText: 'HP 60。超屬性基礎寶可夢。招式【香味】（超能量）：從自己的牌庫選擇 1 隻基礎寶可夢放置於備戰區，重洗牌庫。可進化為麻花犬EX。',
+    timingText: '【主要階段】備戰區未滿 5 隻時直接放置。',
+    tacticsTip: '起手鋪場好手，為下回合進化「麻花犬EX」發動全隊回血特性做準備。'
+  },
+  '火箭隊的謎擬Q': {
+    categoryBadge: '⭐ 基礎寶可夢',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '直接置於備戰區',
+    timingClass: 'guide-badge-timing',
+    effectText: 'HP 60。超屬性基礎寶可夢。招式【扮晶晶酒】（超無能量，30傷害）：可選擇對手戰鬥場上太晶寶可夢的 1 個招式作為此招式使用！',
+    timingText: '【主要階段】直接置於戰鬥場或備戰區。',
+    tacticsTip: '以彼之道還施彼身！能複製對手強大太晶寶可夢（如太晶噴火龍ex、多龍巴魯托ex）的招式反擊對手！'
+  },
+  '真菰': {
+    categoryBadge: '👤 支援者卡',
+    categoryClass: 'guide-badge-supporter',
+    timingBadge: '全隊回血40點 · 支援者',
+    timingClass: 'guide-badge-timing',
+    effectText: '將自己場上的所有寶可夢（戰鬥場與備戰區全體）各恢復 40 點 HP。',
+    timingText: '在自己的回合【主要階段】使用，每回合限用 1 張支援者。',
+    tacticsTip: '群體群補神卡！能一舉破壞對手後排點傷（如多龍巴魯托ex的幽靈潛水、忍蛙的手裡劍）的傷害計算，保全後排關鍵輔助怪。'
+  },
+  '超級雪妖女ex': {
+    categoryBadge: '❄️ 1 階進化寶可夢 (ex)',
+    categoryClass: 'guide-badge-pokemon',
+    timingBadge: '手牌殺傷暴擊 · 昏厥拿2張獎賞卡',
+    timingClass: 'guide-badge-acespec',
+    effectText: 'HP 310。水屬性 1 階寶可夢ex。由雪童子進化。【招式：怨言】（水無能量，50x傷害）：造成對手手牌張數 × 50 點巨額傷害！【招式：純粹雪】（水水無能量，150傷害）：使對手陷入睡眠狀態。',
+    timingText: '重疊在雪童子身上進化。',
+    tacticsTip: '手牌毀滅者！當對手手牌累積 6~7 張時，一招【怨言】能打出 300~350 點爆炸傷害，足以一擊秒殺滿血 330 HP 的巨型 ex 主力！'
   }
 };
 

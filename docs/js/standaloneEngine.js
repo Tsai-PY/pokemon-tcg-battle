@@ -429,12 +429,16 @@
     }
 
     // Supporter
-    if (/研究|博士|指令|老大|奇樹|派帕|阿克羅瑪|赤日|希羅娜|莉莉艾|瑪俐/i.test(clean)) {
+    if (/研究|博士|指令|老大|奇樹|派帕|阿克羅瑪|赤日|希羅娜|莉莉艾|瑪俐|裁判|米可利|真菰/i.test(clean)) {
       let supporterText = '支援者卡：在自己回合主要階段使用，每回合限 1 張，先攻首回合不可使用。';
       if (clean.includes('博士')) supporterText = '將自己的所有手牌全部丟棄，然後從牌庫抽取 7 張卡片。';
       else if (clean.includes('老大')) supporterText = '選擇對手的 1 隻備戰寶可夢，強制與其戰鬥場上的寶可夢互換。';
       else if (clean.includes('奇樹')) supporterText = '雙方將手牌洗回牌庫下方，各自依自己剩餘獎賞卡張數抽卡。';
       else if (clean.includes('派帕')) supporterText = '從牌庫選擇 1 張物品卡與 1 張寶可夢道具卡加入手牌。';
+      else if (clean.includes('裁判')) supporterText = '雙方玩家各自將手牌洗回牌庫，各自抽 4 張卡。';
+      else if (clean.includes('米可利')) supporterText = '從牌庫抽 3 張卡；若戰鬥寶可夢為水屬性則改為抽 4 張。';
+      else if (clean.includes('真菰')) supporterText = '將自己所有寶可夢各恢復 40 點 HP。';
+      else if (clean.includes('莉莉艾')) supporterText = '手牌洗回牌庫抽 6 張卡（若剩餘 6 張獎賞卡則改為抽 8 張）。';
       return {
         id: `card_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         name: clean,
@@ -446,15 +450,19 @@
     }
 
     // Item / Tool
-    if (/球|傷藥|交替|繩|棒|器|筒|指針|糖果|護符|滑板|捕獲/i.test(clean) || isAceSpec) {
-      const subtypes = isAceSpec ? ['Item', 'ACE SPEC'] : (/護符|滑板/i.test(clean) ? ['Tool'] : ['Item']);
+    if (/球|傷藥|交替|交換|繩|棒|器|筒|指針|糖果|護符|護身符|滑板|捕獲|釣竿|灰|演進|平板/i.test(clean) || isAceSpec) {
+      const subtypes = isAceSpec ? ['Item', 'ACE SPEC'] : (/護符|護身符|滑板|演進/i.test(clean) ? ['Tool'] : ['Item']);
       let itemText = '物品卡：在自己回合的主要階段可使用任意張數。';
       if (isAceSpec || clean.includes('至尊')) itemText = '【ACE SPEC】選擇對手 1 隻備戰寶可夢與戰鬥場互換，接著自己也進行戰鬥寶可夢與備戰互換。';
+      else if (clean.includes('希望護身符')) itemText = '【ACE SPEC】昏厥時從牌庫任意選擇最多 3 張卡加入手牌。';
       else if (clean.includes('高級球')) itemText = '丟棄 2 張手牌，從牌庫搜尋任意 1 隻寶可夢加入手牌，重洗牌庫。';
       else if (clean.includes('巢穴球')) itemText = '從自己的牌庫選擇 1 隻基礎寶可夢放置於備戰區，重洗牌庫。';
       else if (clean.includes('糖果')) itemText = '選擇場上 1 隻基礎寶可夢，直接進化為手牌對應的 2 階進化寶可夢！';
-      else if (clean.includes('交替')) itemText = '將自己的戰鬥寶可夢與備戰區的 1 隻寶可夢互換。';
-      else if (clean.includes('棒') || clean.includes('回收')) itemText = '從棄牌區選擇寶可夢與基本能量合計最多 3 張洗回牌庫。';
+      else if (clean.includes('交替') || clean.includes('交換')) itemText = '將自己的戰鬥寶可夢與備戰區的 1 隻寶可夢互換。';
+      else if (clean.includes('棒') || clean.includes('回收') || clean.includes('釣竿')) itemText = '從棄牌區選擇寶可夢與基本能量合計最多 3 張洗回牌庫。';
+      else if (clean.includes('灰')) itemText = '從棄牌區選擇最多 5 張寶可夢卡洗回牌庫。';
+      else if (clean.includes('平板')) itemText = '從牌庫選擇 1 張非規則寶可夢加入手牌。';
+      else if (clean.includes('演進')) itemText = '【寶可夢道具】使備戰區最多 2 隻寶可夢直接進化。';
       else if (clean.includes('器')) itemText = '丟棄 1 張手牌，從牌庫搜尋最多 2 張基本能量卡加入手牌。';
       else if (clean.includes('傷藥')) itemText = '選擇自己的 1 隻寶可夢，恢復其 30 點 HP。';
       else if (clean.includes('護符')) itemText = '【寶可夢道具】附有這張卡的基礎寶可夢最大 HP +50 點。';
@@ -465,7 +473,7 @@
         supertype: 'trainer',
         subtypes,
         isAceSpec,
-        effect: isAceSpec ? 'prime_catcher_double_switch' : clean.includes('傷藥') ? 'heal_30' : clean.includes('交替') ? 'switch_active_bench' : 'search_basic_bench',
+        effect: isAceSpec ? 'prime_catcher_double_switch' : clean.includes('傷藥') ? 'heal_30' : (clean.includes('交替') || clean.includes('交換')) ? 'switch_active_bench' : 'search_basic_bench',
         text: itemText
       };
     }
@@ -473,7 +481,7 @@
     // Pokemon
     let stage = 'Basic';
     if (/二階|2階|stage 2|噴火龍|大比鳥|戟脊龍|多龍巴魯托|沙奈朵|始祖大鳥|魔幻假面喵|耿鬼/i.test(clean)) stage = 'Stage 2';
-    else if (/一階|1階|stage 1|火恐龍|比比鳥|雷丘|凍脊龍|多龍奇|奇魯莉安|蒂蕾喵|天然鳥|vstar/i.test(clean)) stage = 'Stage 1';
+    else if (/一階|1階|stage 1|火恐龍|比比鳥|雷丘|凍脊龍|多龍奇|奇魯莉安|蒂蕾喵|天然鳥|vstar|雪妖女|麻花犬/i.test(clean)) stage = 'Stage 1';
 
     let pType = 'Colorless';
     if (/火/i.test(clean)) pType = 'Fire';
