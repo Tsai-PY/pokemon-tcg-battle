@@ -291,12 +291,16 @@ function renderEditingCardRows() {
     const cat = getCardCategoryBadge(entry.name);
     const emoji = (window.getCardArtEmoji ? window.getCardArtEmoji({ name: entry.name }) : null) || '🎴';
     const isBasicEnergy = /^基本.*能量$/.test(entry.name);
+    const imgUrl = (window.getCardImageUrl ? window.getCardImageUrl(entry.name) : null);
 
     const row = document.createElement('div');
     row.className = 'editor-card-row';
     row.innerHTML = `
       <div class="editor-card-info">
-        <span class="editor-card-emoji">${emoji}</span>
+        <div class="editor-card-thumb-wrap" onclick="openCardPhotoModalForCard('${entry.name}')" title="點擊上傳/更換照片">
+          ${imgUrl ? `<img src="${imgUrl}" class="editor-card-thumb" alt="${entry.name}" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='inline';" />` : ''}
+          <span class="editor-card-emoji" style="${imgUrl ? 'display:none;' : ''}">${emoji}</span>
+        </div>
         <div style="min-width: 0;">
           <div class="editor-card-name" title="${entry.name}">${entry.name}</div>
           <span class="editor-card-badge ${cat.css}">${cat.label}</span>
@@ -311,8 +315,9 @@ function renderEditingCardRows() {
           <button type="button" class="btn-qty" onclick="adjustCardQuantity(${idx}, 1)" title="增加數量" ${(!isBasicEnergy && entry.count >= 4) ? 'disabled' : ''}>+</button>
         </div>
 
-        <!-- Row Actions: Swap & Delete -->
+        <!-- Row Actions: Photo, Swap & Delete -->
         <div class="editor-row-actions">
+          <button type="button" class="btn-photo-card" onclick="openCardPhotoModalForCard('${entry.name}')" title="上傳或更換此卡片照片">📷 換圖</button>
           <button type="button" class="btn-swap-card" onclick="openSwapCardPanel(${idx})">🔄 更換</button>
           <button type="button" class="btn-delete-card" onclick="deleteCardRow(${idx})" title="刪除此卡片">🗑️</button>
         </div>
@@ -758,6 +763,186 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ==================== Card Photo Management ====================
+let currentPhotoCardName = '';
+let currentPhotoPendingData = '';
+
+function openCardPhotoModalForCard(cardName = null) {
+  const modal = document.getElementById('card-photo-modal');
+  const select = document.getElementById('photo-target-card-select');
+  if (!modal || !select) return;
+
+  const optionsSet = new Set();
+  editingCardEntries.forEach(e => optionsSet.add(e.name));
+  POPULAR_CARDS.forEach(p => optionsSet.add(p.name));
+
+  select.innerHTML = '';
+  optionsSet.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  });
+
+  const targetName = cardName || (editingCardEntries[0] ? editingCardEntries[0].name : '小火龍');
+  select.value = targetName;
+  currentPhotoCardName = targetName;
+  currentPhotoPendingData = '';
+
+  updatePhotoModalPreview();
+  modal.style.display = 'flex';
+}
+
+function closeCardPhotoModal() {
+  const modal = document.getElementById('card-photo-modal');
+  if (modal) modal.style.display = 'none';
+  currentPhotoPendingData = '';
+}
+
+function onPhotoTargetCardChanged() {
+  const select = document.getElementById('photo-target-card-select');
+  if (!select) return;
+  currentPhotoCardName = select.value;
+  currentPhotoPendingData = '';
+  updatePhotoModalPreview();
+}
+
+function updatePhotoModalPreview() {
+  const nameDisplay = document.getElementById('photo-target-name-display');
+  const previewImg = document.getElementById('photo-preview-img');
+  const placeholder = document.getElementById('photo-preview-placeholder');
+  const statusBadge = document.getElementById('photo-source-status');
+  const urlInput = document.getElementById('card-photo-url-input');
+  const fileNameDisplay = document.getElementById('card-photo-file-name');
+
+  if (nameDisplay) nameDisplay.textContent = currentPhotoCardName;
+  if (fileNameDisplay) fileNameDisplay.textContent = '未選擇檔案';
+  if (urlInput) urlInput.value = '';
+
+  const activeUrl = currentPhotoPendingData || (window.getCardImageUrl ? window.getCardImageUrl(currentPhotoCardName) : null);
+  const customImages = window.getCustomCardImages ? window.getCustomCardImages() : {};
+  const isCustom = !!customImages[currentPhotoCardName] || !!currentPhotoPendingData;
+
+  if (activeUrl) {
+    if (previewImg) {
+      previewImg.src = activeUrl;
+      previewImg.style.display = 'block';
+    }
+    if (placeholder) placeholder.style.display = 'none';
+    if (statusBadge) {
+      statusBadge.className = isCustom ? 'status-badge status-approved' : 'status-badge status-pending';
+      statusBadge.textContent = isCustom ? '自訂上傳照片' : '官方卡牌圖案';
+    }
+  } else {
+    if (previewImg) previewImg.style.display = 'none';
+    if (placeholder) {
+      placeholder.style.display = 'block';
+      placeholder.textContent = window.getCardArtEmoji ? window.getCardArtEmoji({ name: currentPhotoCardName }) : '🦎';
+    }
+    if (statusBadge) {
+      statusBadge.className = 'status-badge status-rejected';
+      statusBadge.textContent = '預設 Emoji 樣式';
+    }
+  }
+}
+
+function handleCardPhotoFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const fileNameDisplay = document.getElementById('card-photo-file-name');
+  if (fileNameDisplay) fileNameDisplay.textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const rawDataUrl = e.target.result;
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxDim = 640;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      currentPhotoPendingData = canvas.toDataURL('image/jpeg', 0.85);
+
+      const previewImg = document.getElementById('photo-preview-img');
+      const placeholder = document.getElementById('photo-preview-placeholder');
+      const statusBadge = document.getElementById('photo-source-status');
+
+      if (previewImg) {
+        previewImg.src = currentPhotoPendingData;
+        previewImg.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+      if (statusBadge) {
+        statusBadge.className = 'status-badge status-approved';
+        statusBadge.textContent = '已載入新相片（待儲存）';
+      }
+    };
+    img.src = rawDataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyCardPhotoFromUrl() {
+  const urlInput = document.getElementById('card-photo-url-input');
+  if (!urlInput || !urlInput.value.trim()) {
+    alert('請輸入圖片網址！');
+    return;
+  }
+  const url = urlInput.value.trim();
+  currentPhotoPendingData = url;
+
+  const previewImg = document.getElementById('photo-preview-img');
+  const placeholder = document.getElementById('photo-preview-placeholder');
+  const statusBadge = document.getElementById('photo-source-status');
+
+  if (previewImg) {
+    previewImg.src = url;
+    previewImg.style.display = 'block';
+  }
+  if (placeholder) placeholder.style.display = 'none';
+  if (statusBadge) {
+    statusBadge.className = 'status-badge status-approved';
+    statusBadge.textContent = '已輸入網路網址（待儲存）';
+  }
+}
+
+function resetCardPhotoToDefault() {
+  if (!currentPhotoCardName) return;
+  if (window.removeCustomCardImage) {
+    window.removeCustomCardImage(currentPhotoCardName);
+  }
+  currentPhotoPendingData = '';
+  updatePhotoModalPreview();
+  renderEditingCardRows();
+  alert(`已將【${currentPhotoCardName}】恢復為官方預設圖案！`);
+}
+
+function saveCardPhotoModal() {
+  if (!currentPhotoCardName) return;
+  if (currentPhotoPendingData) {
+    if (window.saveCustomCardImage) {
+      window.saveCustomCardImage(currentPhotoCardName, currentPhotoPendingData);
+    }
+  }
+  renderEditingCardRows();
+  closeCardPhotoModal();
+  alert(`已成功更新【${currentPhotoCardName}】的卡牌照片！已即時套用於牌組與對戰！`);
+}
+
 // Expose functions globally for onclick attributes
 window.adjustCardQuantity = adjustCardQuantity;
 window.deleteCardRow = deleteCardRow;
@@ -766,3 +951,10 @@ window.confirmSwapCard = confirmSwapCard;
 window.cancelSwapCard = cancelSwapCard;
 window.editDeckInSlot = editDeckInSlot;
 window.quickBattleWithDeck = quickBattleWithDeck;
+window.openCardPhotoModalForCard = openCardPhotoModalForCard;
+window.closeCardPhotoModal = closeCardPhotoModal;
+window.onPhotoTargetCardChanged = onPhotoTargetCardChanged;
+window.handleCardPhotoFileSelected = handleCardPhotoFileSelected;
+window.applyCardPhotoFromUrl = applyCardPhotoFromUrl;
+window.resetCardPhotoToDefault = resetCardPhotoToDefault;
+window.saveCardPhotoModal = saveCardPhotoModal;

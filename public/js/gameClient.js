@@ -441,17 +441,27 @@ function inspectCard(card, location, slotIndex = null) {
     `;
   }
 
+  const cardImgUrl = (window.getCardImageUrl ? window.getCardImageUrl(card.name, card) : null);
+  const cardPhotoHtml = cardImgUrl ? `
+    <div style="width: 140px; flex-shrink: 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.6); border: 2px solid #475569;">
+      <img src="${cardImgUrl}" alt="${card.name}" style="width: 100%; height: auto; display: block;" onerror="this.parentElement.style.display='none';" />
+    </div>
+  ` : '';
+
   content.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-      <h3 style="font-size: 1.25rem; font-weight: 800; color: #ffcb05;">${card.name}</h3>
-      <span style="font-size: 0.85rem; color: #94a3b8;">${card.subtypes ? card.subtypes.join(' / ') : ''}</span>
+    <div style="display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap;">
+      ${cardPhotoHtml}
+      <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 6px;">
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #ffcb05; margin: 0;">${card.name}</h3>
+          <span style="font-size: 0.85rem; color: #94a3b8;">${card.subtypes ? card.subtypes.join(' / ') : ''}</span>
+        </div>
+        ${card.hp ? `<div style="font-size: 0.95rem; font-weight: bold; color: #ef4444;">當前 HP: ${card.currentHp || card.hp} / ${card.maxHp || card.hp} (傷害: ${card.damage || 0})</div>` : ''}
+        ${card.text ? `<div style="font-size: 0.85rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px;">${card.text}</div>` : ''}
+        ${abilityHtml}
+      </div>
     </div>
 
-    ${card.hp ? `<div style="font-size: 0.95rem; font-weight: bold; color: #ef4444;">當前 HP: ${card.currentHp || card.hp} / ${card.maxHp || card.hp} (傷害: ${card.damage || 0})</div>` : ''}
-
-    ${card.text ? `<div style="font-size: 0.85rem; color: #cbd5e1; background: #0f172a; padding: 8px; border-radius: 6px;">${card.text}</div>` : ''}
-
-    ${abilityHtml}
     ${attacksListHtml}
 
     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
