@@ -614,17 +614,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const retreatBtn = document.getElementById('btn-action-retreat');
   if (retreatBtn) retreatBtn.addEventListener('click', openRetreatChoiceModal);
 
-  const toggleMatBgBtn = document.getElementById('toggle-mat-bg-btn');
-  if (toggleMatBgBtn) {
-    toggleMatBgBtn.addEventListener('click', () => {
-      const mat = document.getElementById('ptcg-mat');
-      if (mat) {
-        mat.classList.toggle('photo-mode');
-        const isPhoto = mat.classList.contains('photo-mode');
-        toggleMatBgBtn.textContent = isPhoto ? '🎨 切換數位風格墊' : '🖼️ 切換實體照片墊';
-      }
-    });
-  }
   const rulesBtn = document.getElementById('btn-action-rules');
   const rulesModal = document.getElementById('rules-modal');
   const closeRulesBtn = document.getElementById('close-rules-modal-btn');

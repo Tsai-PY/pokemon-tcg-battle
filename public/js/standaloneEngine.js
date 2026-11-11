@@ -652,11 +652,56 @@
       };
     }
 
+    _hasBasicPokemon(hand) {
+      return (hand || []).some(c => c.supertype === 'pokemon' && c.subtypes && c.subtypes.includes('Basic'));
+    }
+
+    _shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
     startSetup() {
+      // 抽 7 張起手手牌
       for (const p of this.players) {
         p.hand = p.deck.splice(0, 7);
-        // Ensure basic
-        const basics = p.hand.filter(c => c.supertype === 'pokemon' && c.subtypes.includes('Basic'));
+      }
+
+      // 檢查起手基礎寶可夢：如果一開始任何一方都沒有可以放上戰鬥場的寶可夢，則直接幫雙方重新抽牌開始新的一局
+      let attempts = 0;
+      while (attempts < 50) {
+        const p0HasBasic = this._hasBasicPokemon(this.players[0].hand);
+        const p1HasBasic = this._hasBasicPokemon(this.players[1].hand);
+
+        if (p0HasBasic && p1HasBasic) {
+          break;
+        }
+
+        attempts++;
+        if (!p0HasBasic && !p1HasBasic) {
+          this.log(`【重新抽牌開局】雙方（${this.players[0].name} 與 ${this.players[1].name}）起手皆無可放上戰鬥場的基礎寶可夢！依規則直接為雙方重新洗牌抽牌，開始新的一局。`);
+        } else if (!p0HasBasic) {
+          this.log(`【重新抽牌開局】${this.players[0].name} 起手無可放上戰鬥場的基礎寶可夢！依規則直接為雙方重新洗牌抽牌，開始新的一局。`);
+        } else {
+          this.log(`【重新抽牌開局】${this.players[1].name} 起手無可放上戰鬥場的基礎寶可夢！依規則直接為雙方重新洗牌抽牌，開始新的一局。`);
+        }
+
+        // 雙方將手牌洗回牌庫並重新洗牌抽 7 張
+        for (const p of this.players) {
+          p.deck.push(...p.hand);
+          p.hand = [];
+          p.deck = this._shuffle(p.deck);
+          p.hand = p.deck.splice(0, 7);
+        }
+      }
+
+      // 放置戰鬥寶可夢與備戰寶可夢
+      for (const p of this.players) {
+        const basics = p.hand.filter(c => c.supertype === 'pokemon' && c.subtypes && c.subtypes.includes('Basic'));
         if (basics.length > 0) {
           const act = basics[0];
           p.hand = p.hand.filter(c => c.instanceId !== act.instanceId);
@@ -667,10 +712,12 @@
             p.bench.push(b);
           }
         }
+        // 設置 6 張獎賞卡
         p.prizes = p.deck.splice(0, 6);
       }
 
       this.log(`【先後攻】硬幣判定由 ${this.players[this.activePlayerIndex].name} 先攻！`);
+      this.log(`【獎賞卡】雙方各設置了 6 張獎賞卡，對戰正式開始！`);
       this.log(`★ 規則限制：先攻第一回合「不能抽牌」、「不能使出招式」、「不能使用支援者卡」、「不能進化」。`);
     }
 

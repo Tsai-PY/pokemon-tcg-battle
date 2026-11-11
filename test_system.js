@@ -111,6 +111,38 @@ const attackRes = game.attack(game.activePlayerIndex, 0);
 assert(attackRes.success, '第2回合應可使出攻擊');
 console.log('✓ 攻擊成功執行並自動計算傷害與切換回合');
 
+console.log('\n--- 4. 測試起手無基礎寶可夢時，雙方重新抽牌開局 (Mulligan規則) ---');
+const mulliganGame = new PTCGGame('test_game_mulligan', {
+  id: 'p1_test',
+  name: '玩家1',
+  deck: decks[0]
+}, {
+  id: 'p2_test',
+  name: '玩家2',
+  deck: decks[1]
+});
+
+// 模擬玩家 1 起手前 7 張完全沒有基礎寶可夢
+// 將所有基礎寶可夢移到牌庫底部（index 20 以後）
+const p1NonBasics = mulliganGame.players[0].deck.filter(c => !(c.supertype === 'pokemon' && c.subtypes && c.subtypes.includes('Basic')));
+const p1Basics = mulliganGame.players[0].deck.filter(c => c.supertype === 'pokemon' && c.subtypes && c.subtypes.includes('Basic'));
+mulliganGame.players[0].deck = [...p1NonBasics, ...p1Basics];
+
+// 執行開局
+mulliganGame.startSetup();
+
+// 驗證是否有觸發重新抽牌開局日誌
+const hasRedrawLog = mulliganGame.logs.some(l => l.message.includes('重新抽牌開局'));
+assert(hasRedrawLog, '任何一方起手無基礎寶可夢時，應觸發雙方重新抽牌開局');
+console.log('✓ 成功觸發雙方重新洗牌抽牌開局：', mulliganGame.logs.find(l => l.message.includes('重新抽牌開局')).message);
+
+// 驗證最終雙方皆成功放置戰鬥場寶可夢
+assert(mulliganGame.players[0].active, '玩家1應有戰鬥場寶可夢');
+assert(mulliganGame.players[1].active, '玩家2應有戰鬥場寶可夢');
+assert.strictEqual(mulliganGame.players[0].prizes.length, 6, '玩家1獎賞卡應為6張');
+assert.strictEqual(mulliganGame.players[1].prizes.length, 6, '玩家2獎賞卡應為6張');
+console.log(`✓ 重新開局後雙方戰鬥場皆已成功放置寶可夢 (P1: ${mulliganGame.players[0].active.name}, P2: ${mulliganGame.players[1].active.name})`);
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');
