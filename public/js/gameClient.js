@@ -188,6 +188,8 @@ function renderGameState(state) {
     activeLabel.style.color = isMyTurn ? '#34d399' : '#f59e0b';
   }
 
+  const retreatBtn = document.getElementById('btn-action-retreat');
+
   if (endTurnBtn) {
     endTurnBtn.disabled = !isMyTurn;
     endTurnBtn.style.opacity = isMyTurn ? '1' : '0.5';
@@ -195,6 +197,11 @@ function renderGameState(state) {
   if (attackBtn) {
     attackBtn.disabled = !isMyTurn || state.turnNumber === 1;
     attackBtn.style.opacity = (!isMyTurn || state.turnNumber === 1) ? '0.5' : '1';
+  }
+  if (retreatBtn) {
+    const canRetreat = isMyTurn && player.bench && player.bench.length > 0 && !(player.turnFlags && player.turnFlags.retreatedThisTurn);
+    retreatBtn.disabled = !canRetreat;
+    retreatBtn.style.opacity = canRetreat ? '1' : '0.5';
   }
 
   // 1. OPPONENT FIELD (TOP)

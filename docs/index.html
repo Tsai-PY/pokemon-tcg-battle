@@ -313,9 +313,16 @@
                 <div class="ptcg-card ptcg-card-back prize-card"></div>
               </div>
 
-              <!-- Center-Front: 戰鬥場 (Active) -->
-              <div class="mat-slot player-active-slot" id="player-active-zone">
-                <span class="mat-slot-label">戰鬥場</span>
+              <!-- Center-Front: 戰鬥場 (Active) 與 三個並排戰鬥選項 -->
+              <div class="player-active-container">
+                <div class="mat-slot player-active-slot" id="player-active-zone">
+                  <span class="mat-slot-label">戰鬥場</span>
+                </div>
+                <div class="player-battle-actions-row" id="player-battle-actions-row">
+                  <button class="btn btn-accent btn-battle-action" id="btn-action-attack">⚔️ 使出招式</button>
+                  <button class="btn btn-secondary btn-battle-action" id="btn-action-retreat">🏃 撤退寶可夢</button>
+                  <button class="btn btn-primary btn-battle-action" id="btn-action-end-turn">⏭️ 結束回合</button>
+                </div>
               </div>
 
               <!-- Center-Back: 備戰區 (5 Bench Slots) -->
@@ -362,12 +369,7 @@
             <button class="btn btn-secondary btn-sm" id="surrender-btn">離開對戰</button>
           </div>
 
-          <div class="action-controls-panel">
-            <button class="btn btn-accent btn-sm" id="btn-action-attack">⚔️ 使出招式</button>
-            <button class="btn btn-primary btn-sm" id="btn-action-end-turn">⏭️ 結束回合</button>
-            <button class="btn btn-secondary btn-sm" id="btn-action-retreat">🏃 撤退寶可夢</button>
-            <button class="btn btn-secondary btn-sm" id="btn-action-rules">📖 規則提示</button>
-          </div>
+
 
           <div style="padding: 6px 14px; background: #1e293b; font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between;">
             <span>即時對戰歷程</span>
