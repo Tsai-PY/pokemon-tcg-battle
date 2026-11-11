@@ -21,6 +21,7 @@
 
     <nav class="nav-links" id="main-nav" style="display: none;">
       <button class="nav-btn active" data-view="view-decks">🎴 共同牌庫 (10組)</button>
+      <button class="nav-btn" data-view="view-upload">📤 上傳共同牌庫</button>
       <button class="nav-btn" data-view="view-match">⚔️ 開始對戰</button>
       <button class="nav-btn" data-view="view-admin" id="nav-admin-btn" style="display: none;">👑 管理員審核</button>
     </nav>
@@ -91,23 +92,166 @@
       </div>
     </section>
 
-    <!-- 2. SHARED DECKS VIEW (共同牌庫管理) -->
+    <!-- 2. SHARED DECKS VIEW (共同牌庫清單) -->
     <section id="view-decks" class="view-section">
       <div class="panel-container">
         <div class="glass-card">
           <div class="section-header">
             <div>
-              <h2 class="section-title">🎴 系統共同牌庫（最多接受 10 組）</h2>
+              <h2 class="section-title">🎴 系統共同牌庫（共 10 組）</h2>
               <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
-                會員可上傳自己的 60 張牌庫，系統自動辨識卡片內容並建置資料，對戰雙方皆可自由選用。
+                系統提供對戰雙方自由選用之標準 60 張牌庫。欲建立或上傳新牌庫，請使用上方「📤 上傳共同牌庫」功能選單。
               </p>
             </div>
-            <button class="btn btn-accent" id="open-upload-modal-btn">📤 上傳/替換共同牌庫</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadSharedDecks()">🔄 重新整理牌庫</button>
           </div>
 
           <!-- 10 Shared Decks Grid -->
           <div class="decks-grid" id="decks-grid-container">
             <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2.5 UPLOAD DECK VIEW (獨立上傳共同牌庫功能選單) -->
+    <section id="view-upload" class="view-section">
+      <div class="panel-container">
+        <div class="glass-card">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">📤 上傳共同牌庫（60張規範）</h2>
+              <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+                獨立專屬的牌庫建置中心：請選擇欲存入的共同牌庫槽位（1~10組），編輯卡牌清單、調整數量、拍照或上傳卡片自動辨識，完成規格驗證後確認儲存！
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-template-charizard">📑 帶入噴火龍範例</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-template-pikachu">📑 帶入皮卡丘範例</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label style="font-weight: 700; color: #e2e8f0;">存入共同牌庫槽位（上限 10 組）：</label>
+            <select class="form-control" id="upload-slot-select" style="font-size: 1rem; padding: 10px 14px;">
+              <option value="1">槽位 1</option>
+              <option value="2">槽位 2</option>
+              <option value="3">槽位 3</option>
+              <option value="4">槽位 4</option>
+              <option value="5">槽位 5</option>
+              <option value="6">槽位 6</option>
+              <option value="7">槽位 7</option>
+              <option value="8">槽位 8</option>
+              <option value="9">槽位 9</option>
+              <option value="10">槽位 10</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight: 700; color: #e2e8f0;">牌組自訂名稱：</label>
+            <input type="text" class="form-control" id="upload-deck-name" placeholder="例如：超強噴火龍ex狂暴牌組" required>
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight: 700; color: #e2e8f0;">牌組說明 / 戰術簡介：</label>
+            <input type="text" class="form-control" id="upload-deck-desc" placeholder="例如：快速進化大比鳥與噴火龍，爆發附能擊倒對手">
+          </div>
+
+          <!-- Dual Mode Tabs -->
+          <div class="deck-editor-tabs" style="margin-top: 20px;">
+            <button type="button" class="btn btn-primary btn-sm active" id="btn-tab-visual-editor">🎴 卡片清單與數量調整</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-tab-text-editor">📝 純文字清單／貼上</button>
+          </div>
+
+          <!-- 1. Interactive Visual Card Editor -->
+          <div id="editor-visual-container">
+            <!-- Live Summary Bar -->
+            <div class="deck-summary-bar">
+              <div>
+                <span id="visual-deck-count-pill" class="deck-count-pill exact-60">
+                  🎴 總張數：<span id="visual-total-cards">60</span> / 60 張
+                </span>
+              </div>
+              <div class="deck-breakdown-tags">
+                <span>寶可夢: <strong id="visual-count-pokemon">0</strong></span>
+                <span>訓練家: <strong id="visual-count-trainer">0</strong></span>
+                <span>能量: <strong id="visual-count-energy">0</strong></span>
+                <span>ACE SPEC: <strong id="visual-count-acespec">0</strong>/1</span>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-accent btn-sm" id="btn-toggle-add-card">➕ 新增卡片</button>
+                <input type="file" id="direct-deck-photo-input" accept="image/*" style="display: none;" onchange="handleDirectDeckPhotoUpload(event)">
+                <button type="button" class="btn btn-warning btn-sm" id="btn-direct-upload-recognize" onclick="document.getElementById('direct-deck-photo-input').click()" title="選取卡片照片或拍照，立即自動辨識並加入牌庫！">
+                  📷 拍照/上傳辨識加牌
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-card-photos" onclick="openCardPhotoModalForCard()">🖼️ 卡牌照片管理</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck-visual">🔍 智能辨識與規格驗證</button>
+              </div>
+            </div>
+
+            <!-- Add Card Panel (Collapsible / Toggleable) -->
+            <div class="add-card-box" id="add-card-panel" style="display: none;">
+              <div style="display: flex; gap: 8px; flex: 1; min-width: 260px;">
+                <select class="form-control" id="add-card-select" style="flex: 1;">
+                  <option value="">-- 快速從牌庫選擇熱門卡牌 --</option>
+                  <!-- Populated dynamically by JS -->
+                </select>
+                <input type="text" class="form-control" id="add-card-custom-name" placeholder="或手動輸入自訂卡名" style="flex: 1;">
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label style="font-size: 0.85rem; color: #94a3b8; margin: 0;">數量:</label>
+                <input type="number" class="form-control" id="add-card-count" min="1" max="59" value="1" style="width: 65px; text-align: center;">
+              </div>
+              <button type="button" class="btn btn-success btn-sm" id="btn-confirm-add-card">確認加入</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-add-card">關閉</button>
+            </div>
+
+            <!-- Card Swap Panel -->
+            <div class="add-card-box" id="swap-card-panel" style="display: none; background: rgba(2, 132, 199, 0.15); border-color: #0284c7;">
+              <span style="font-size: 0.9rem; font-weight: bold; color: #38bdf8;" id="swap-target-label">更換卡片：</span>
+              <select class="form-control" id="swap-card-select" style="flex: 1; min-width: 200px;">
+                <!-- Populated dynamically by JS -->
+              </select>
+              <input type="text" class="form-control" id="swap-card-custom-name" placeholder="或輸入自訂新卡名" style="flex: 1; min-width: 160px;">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-swap-card">確認更換</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-swap-card">取消</button>
+            </div>
+
+            <!-- Scrollable Card Rows -->
+            <div class="editor-cards-scroll" id="editor-cards-list" style="max-height: 480px;">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- 2. Raw Text Editor (Hidden by default, switchable via tab) -->
+          <div id="editor-text-container" style="display: none;">
+            <div class="form-group">
+              <label>輸入卡牌清單（每行一張，如「4 小火龍」或「噴火龍ex 3」）</label>
+              <textarea class="form-control" id="upload-deck-text" rows="12" placeholder="每行一張卡牌，格式如：&#10;4 小火龍&#10;1 火恐龍&#10;3 噴火龍ex&#10;2 波波&#10;2 大比鳥ex&#10;4 博士的研究&#10;3 老大的指令&#10;1 至尊捕捉器&#10;8 基本火能量&#10;..."></textarea>
+              <div class="form-hint">
+                支援官方 PTCG 格式或簡易名稱，輸入後切換回「卡片清單」將自動同步並辨識卡牌內容！
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck">🔍 智能辨識與規格驗證</button>
+            </div>
+          </div>
+
+          <!-- Real-time Rules Validation Box -->
+          <div class="validation-bar" id="deck-validation-box" style="margin-top: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="font-size: 0.95rem;">PTCG 官方規格驗證結果：</strong>
+              <span id="deck-validation-badge" class="status-badge status-pending">驗證中</span>
+            </div>
+            <ul class="validation-checklist" id="deck-validation-list">
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+
+          <!-- Action Footer inside the card -->
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #334155;">
+            <button class="btn btn-secondary" id="btn-return-decks" onclick="switchView('view-decks')">返回共同牌庫清單</button>
+            <button class="btn btn-success" id="confirm-upload-btn" style="font-size: 1rem; padding: 10px 24px;">確認儲存到共同牌庫</button>
           </div>
         </div>
       </div>
@@ -388,136 +532,21 @@
 
   <!-- ================= MODALS ================= -->
 
-  <!-- Deck Upload / Builder Modal -->
-  <div class="modal-overlay" id="deck-modal">
-    <div class="modal-content">
+  <!-- Deck Detail Preview Modal (查看牌組詳細卡牌清單) -->
+  <div class="modal-overlay" id="deck-detail-modal" style="z-index: 2100;">
+    <div class="modal-content" style="max-width: 640px;">
       <div class="modal-header">
-        <h3 class="modal-title">📤 上傳與建置共同牌庫（60張規範）</h3>
-        <button class="modal-close" id="close-deck-modal-btn">&times;</button>
+        <h3 class="modal-title" id="deck-detail-title">🔍 牌組詳細內容</h3>
+        <button class="modal-close" onclick="closeDeckDetailModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label>存入共同牌庫槽位（上限 10 組）</label>
-          <select class="form-control" id="upload-slot-select">
-            <option value="1">槽位 1</option>
-            <option value="2">槽位 2</option>
-            <option value="3">槽位 3</option>
-            <option value="4">槽位 4</option>
-            <option value="5">槽位 5</option>
-            <option value="6">槽位 6</option>
-            <option value="7">槽位 7</option>
-            <option value="8">槽位 8</option>
-            <option value="9">槽位 9</option>
-            <option value="10">槽位 10</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>牌組自訂名稱</label>
-          <input type="text" class="form-control" id="upload-deck-name" placeholder="例如：超強噴火龍ex狂暴牌組" required>
-        </div>
-
-        <div class="form-group">
-          <label>牌組說明 / 戰術簡介</label>
-          <input type="text" class="form-control" id="upload-deck-desc" placeholder="例如：快速進化大比鳥與噴火龍，爆發附能擊倒對手">
-        </div>
-
-        <!-- Dual Mode Tabs -->
-        <div class="deck-editor-tabs">
-          <button type="button" class="btn btn-primary btn-sm active" id="btn-tab-visual-editor">🎴 卡片清單與數量調整</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-tab-text-editor">📝 純文字清單／貼上</button>
-        </div>
-
-        <!-- 1. Interactive Visual Card Editor -->
-        <div id="editor-visual-container">
-          <!-- Live Summary Bar -->
-          <div class="deck-summary-bar">
-            <div>
-              <span id="visual-deck-count-pill" class="deck-count-pill exact-60">
-                🎴 總張數：<span id="visual-total-cards">60</span> / 60 張
-              </span>
-            </div>
-            <div class="deck-breakdown-tags">
-              <span>寶可夢: <strong id="visual-count-pokemon">0</strong></span>
-              <span>訓練家: <strong id="visual-count-trainer">0</strong></span>
-              <span>能量: <strong id="visual-count-energy">0</strong></span>
-              <span>ACE SPEC: <strong id="visual-count-acespec">0</strong>/1</span>
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button type="button" class="btn btn-accent btn-sm" id="btn-toggle-add-card">➕ 新增卡片</button>
-              <input type="file" id="direct-deck-photo-input" accept="image/*" style="display: none;" onchange="handleDirectDeckPhotoUpload(event)">
-              <button type="button" class="btn btn-warning btn-sm" id="btn-direct-upload-recognize" onclick="document.getElementById('direct-deck-photo-input').click()" title="選取卡片照片或拍照，立即自動辨識並加入牌庫！">
-                📷 拍照/上傳辨識加牌
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-open-card-photos" onclick="openCardPhotoModalForCard()">🖼️ 卡牌照片管理</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck-visual">🔍 智能辨識與規格驗證</button>
-            </div>
-          </div>
-
-          <!-- Add Card Panel (Collapsible / Toggleable) -->
-          <div class="add-card-box" id="add-card-panel" style="display: none;">
-            <div style="display: flex; gap: 8px; flex: 1; min-width: 260px;">
-              <select class="form-control" id="add-card-select" style="flex: 1;">
-                <option value="">-- 快速從牌庫選擇熱門卡牌 --</option>
-                <!-- Populated dynamically by JS -->
-              </select>
-              <input type="text" class="form-control" id="add-card-custom-name" placeholder="或手動輸入自訂卡名" style="flex: 1;">
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <label style="font-size: 0.85rem; color: #94a3b8; margin: 0;">數量:</label>
-              <input type="number" class="form-control" id="add-card-count" min="1" max="59" value="1" style="width: 65px; text-align: center;">
-            </div>
-            <button type="button" class="btn btn-success btn-sm" id="btn-confirm-add-card">確認加入</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-add-card">關閉</button>
-          </div>
-
-          <!-- Card Swap Panel -->
-          <div class="add-card-box" id="swap-card-panel" style="display: none; background: rgba(2, 132, 199, 0.15); border-color: #0284c7;">
-            <span style="font-size: 0.9rem; font-weight: bold; color: #38bdf8;" id="swap-target-label">更換卡片：</span>
-            <select class="form-control" id="swap-card-select" style="flex: 1; min-width: 200px;">
-              <!-- Populated dynamically by JS -->
-            </select>
-            <input type="text" class="form-control" id="swap-card-custom-name" placeholder="或輸入自訂新卡名" style="flex: 1; min-width: 160px;">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-swap-card">確認更換</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-cancel-swap-card">取消</button>
-          </div>
-
-          <!-- Scrollable Card Rows -->
-          <div class="editor-cards-scroll" id="editor-cards-list">
-            <!-- Rendered by JS -->
-          </div>
-        </div>
-
-        <!-- 2. Raw Text Editor (Hidden by default, switchable via tab) -->
-        <div id="editor-text-container" style="display: none;">
-          <div class="form-group">
-            <label>輸入卡牌清單（每行一張，如「4 小火龍」或「噴火龍ex 3」）</label>
-            <textarea class="form-control" id="upload-deck-text" rows="10" placeholder="每行一張卡牌，格式如：&#10;4 小火龍&#10;1 火恐龍&#10;3 噴火龍ex&#10;2 波波&#10;2 大比鳥ex&#10;4 博士的研究&#10;3 老大的指令&#10;1 至尊捕捉器&#10;8 基本火能量&#10;..."></textarea>
-            <div class="form-hint">
-              支援官方 PTCG 格式或簡易名稱，輸入後切換回「卡片清單」將自動同步並辨識卡牌內容！
-            </div>
-          </div>
-          <div style="display: flex; gap: 10px; margin-top: 8px;">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-parse-deck">🔍 智能辨識與規格驗證</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-template-charizard">📑 帶入噴火龍範例</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-template-pikachu">📑 帶入皮卡丘範例</button>
-          </div>
-        </div>
-
-        <!-- Real-time Rules Validation Box -->
-        <div class="validation-bar" id="deck-validation-box" style="margin-top: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 0.95rem;">PTCG 官方規格驗證結果：</strong>
-            <span id="deck-validation-badge" class="status-badge status-pending">驗證中</span>
-          </div>
-          <ul class="validation-checklist" id="deck-validation-list">
-            <!-- Populated by JS -->
-          </ul>
-        </div>
+        <div id="deck-detail-meta" style="margin-bottom: 12px; color: #94a3b8; font-size: 0.9rem; line-height: 1.5; background: #0f172a; padding: 10px 14px; border-radius: 6px; border: 1px solid #334155;"></div>
+        <div id="deck-detail-summary-bar" class="deck-summary-bar" style="margin-bottom: 12px;"></div>
+        <div id="deck-detail-cards-list" class="editor-cards-scroll" style="max-height: 420px;"></div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancel-upload-btn">取消</button>
-        <button class="btn btn-success" id="confirm-upload-btn">確認儲存到共同牌庫</button>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="closeDeckDetailModal()">關閉</button>
+        <button class="btn btn-primary" id="deck-detail-battle-btn">⚔️ 使用此牌組對戰</button>
       </div>
     </div>
   </div>

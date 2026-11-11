@@ -18,6 +18,10 @@ function switchView(targetViewId) {
   // Lazy load views
   if (targetViewId === 'view-decks') {
     loadSharedDecks();
+  } else if (targetViewId === 'view-upload') {
+    if (typeof initUploadDeckView === 'function') {
+      initUploadDeckView();
+    }
   } else if (targetViewId === 'view-admin') {
     loadAdminMembers();
   }

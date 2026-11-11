@@ -125,7 +125,7 @@ async function loadSharedDecks() {
             <div class="deck-stat-item" style="color: #34d399;">✓ 符合官方規範</div>
           </div>
           <div class="deck-actions">
-            <button class="btn btn-secondary btn-sm" onclick="editDeckInSlot(${slot})">✏️ 替換/編輯</button>
+            <button class="btn btn-secondary btn-sm" onclick="viewDeckDetails(${slot})">🔍 查看內容</button>
             <button class="btn btn-primary btn-sm" onclick="quickBattleWithDeck(${slot})">⚔️ 使用此牌組對戰</button>
           </div>
         `;
@@ -146,9 +146,9 @@ async function loadSharedDecks() {
         cardEl.innerHTML = `
           <div class="deck-slot-badge">槽位 ${slot} / 10</div>
           <h3 class="deck-title" style="color: #94a3b8;">空槽位</h3>
-          <p class="deck-description" style="color: #64748b;">尚未上傳牌組。任何會員皆可上傳牌組至此共同槽位！</p>
+          <p class="deck-description" style="color: #64748b;">尚未設定牌組。可至上方「上傳共同牌庫」功能選單進行建置！</p>
           <div class="deck-actions" style="margin-top: auto;">
-            <button class="btn btn-accent btn-sm" onclick="editDeckInSlot(${slot})">📤 上傳新牌組</button>
+            <span style="color: #64748b; font-size: 0.85rem;">（未設定牌組：請至「上傳共同牌庫」選單建置）</span>
           </div>
         `;
       }
@@ -159,42 +159,131 @@ async function loadSharedDecks() {
     if (matchP2Select && matchP2Select.options.length > 1) {
       matchP2Select.selectedIndex = 1; // Default opponent to deck 2
     }
+    updateSlotSelectDropdown();
   } catch (err) {
     console.error('loadSharedDecks error:', err);
   }
 }
 
-function editDeckInSlot(slot) {
-  const modal = document.getElementById('deck-modal');
+function updateSlotSelectDropdown() {
+  const slotSelect = document.getElementById('upload-slot-select');
+  if (!slotSelect) return;
+  const currentVal = slotSelect.value || '1';
+  slotSelect.innerHTML = '';
+  for (let s = 1; s <= 10; s++) {
+    const d = currentSharedDecks.find(deck => deck.slot === s);
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = `【槽位 ${s}】${d ? d.name : '（空槽位 - 可建立新牌組）'}`;
+    slotSelect.appendChild(opt);
+  }
+  slotSelect.value = currentVal;
+}
+
+function loadDeckIntoEditor(slot) {
   const slotSelect = document.getElementById('upload-slot-select');
   const nameInput = document.getElementById('upload-deck-name');
   const descInput = document.getElementById('upload-deck-desc');
   const textInput = document.getElementById('upload-deck-text');
 
-  slotSelect.value = slot;
+  if (slotSelect) slotSelect.value = slot;
   const existing = currentSharedDecks.find(d => d.slot === slot);
 
   if (existing && existing.cardEntries && existing.cardEntries.length > 0) {
-    nameInput.value = existing.name;
-    descInput.value = existing.description || '';
+    if (nameInput) nameInput.value = existing.name;
+    if (descInput) descInput.value = existing.description || '';
     editingCardEntries = existing.cardEntries.map(e => ({ name: e.name, count: parseInt(e.count, 10) || 1 }));
   } else {
-    nameInput.value = `訓練家自訂牌組 ${slot}`;
-    descInput.value = '';
+    if (nameInput) nameInput.value = `訓練家自訂牌組 ${slot}`;
+    if (descInput) descInput.value = '';
     // Load default Charizard template cards if empty slot
     editingCardEntries = parseTextToEntries(CHARIZARD_TEMPLATE);
   }
 
   // Format into textarea
-  textInput.value = editingCardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+  if (textInput) {
+    textInput.value = editingCardEntries.map(e => `${e.count} ${e.name}`).join('\n');
+  }
 
   // Switch to visual editor by default
   switchEditorTab('visual');
   populateCardSelectDropdowns();
   renderEditingCardRows();
   parseAndValidateDeck(false);
+}
+
+function initUploadDeckView(slot = null) {
+  updateSlotSelectDropdown();
+  const slotSelect = document.getElementById('upload-slot-select');
+  const targetSlot = slot || (slotSelect ? parseInt(slotSelect.value, 10) || 1 : 1);
+  loadDeckIntoEditor(targetSlot);
+}
+
+function editDeckInSlot(slot) {
+  if (typeof switchView === 'function') {
+    switchView('view-upload');
+  }
+  loadDeckIntoEditor(slot);
+}
+
+function viewDeckDetails(slot) {
+  const deck = currentSharedDecks.find(d => d.slot === slot);
+  if (!deck) return;
+  const modal = document.getElementById('deck-detail-modal');
+  const title = document.getElementById('deck-detail-title');
+  const meta = document.getElementById('deck-detail-meta');
+  const summaryBar = document.getElementById('deck-detail-summary-bar');
+  const list = document.getElementById('deck-detail-cards-list');
+  const battleBtn = document.getElementById('deck-detail-battle-btn');
+  if (!modal) return;
+
+  title.textContent = `🔍 【槽位 ${slot}】${deck.name}`;
+  meta.innerHTML = `<strong>作者：</strong>${deck.author || '系統'} | <strong>更新時間：</strong>${deck.updatedAt ? new Date(deck.updatedAt).toLocaleDateString() : '預設'}<br><strong style="margin-top: 4px; display: inline-block;">戰術說明：</strong>${deck.description || '標準 60 張 PTCG 對戰牌組'}`;
+
+  const entries = deck.cardEntries || [];
+  const totalCards = entries.reduce((s, e) => s + (parseInt(e.count, 10) || 1), 0);
+
+  summaryBar.innerHTML = `
+    <div><span class="deck-count-pill exact-60">🎴 總張數：${totalCards} / 60 張</span></div>
+    <div style="color: #34d399; font-size: 0.9rem; font-weight: bold;">✓ 符合官方 PTCG 規格（可直接對戰）</div>
+  `;
+
+  list.innerHTML = '';
+  entries.forEach(entry => {
+    const cardInfo = window.recognizeCard ? window.recognizeCard(entry.name) : null;
+    const cat = cardInfo ? cardInfo.category : 'other';
+    const tagClass = cat === 'pokemon' ? 'tag-pokemon' : (cat === 'supporter' ? 'tag-supporter' : (cat === 'energy' ? 'tag-energy' : 'tag-item'));
+    const art = window.getCardDisplayArt ? window.getCardDisplayArt(entry.name) : { type: 'emoji', value: '🎴' };
+    const row = document.createElement('div');
+    row.className = 'editor-card-row';
+    row.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.4rem;">${art.type === 'image' ? `<img src="${art.value}" style="width: 28px; height: 38px; object-fit: contain; border-radius: 3px;" />` : art.value}</span>
+        <div>
+          <span class="editor-card-name" style="font-weight: bold; font-size: 0.95rem;">${entry.name}</span>
+          <span class="editor-card-cat ${tagClass}" style="margin-left: 6px;">${getCategoryChineseName(cat)}</span>
+        </div>
+      </div>
+      <div style="font-weight: 800; color: #38bdf8; font-size: 1.1rem; padding-right: 8px;">
+        ${entry.count} 張
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  if (battleBtn) {
+    battleBtn.onclick = () => {
+      closeDeckDetailModal();
+      quickBattleWithDeck(slot);
+    };
+  }
 
   modal.classList.add('active');
+}
+
+function closeDeckDetailModal() {
+  const modal = document.getElementById('deck-detail-modal');
+  if (modal) modal.classList.remove('active');
 }
 
 function parseTextToEntries(text) {
@@ -629,8 +718,13 @@ async function submitDeckUpload() {
     }
 
     alert(`🎉 恭喜！牌組「${name}」已成功儲存至共同牌庫第 ${slot} 組！\n對戰雙方皆可立即選用進行對戰！`);
-    document.getElementById('deck-modal').classList.remove('active');
-    loadSharedDecks();
+    const modal = document.getElementById('deck-modal');
+    if (modal) modal.classList.remove('active');
+    await loadSharedDecks();
+    updateSlotSelectDropdown();
+    if (typeof switchView === 'function') {
+      switchView('view-decks');
+    }
   } catch (err) {
     console.error('submitDeckUpload error:', err);
     alert('儲存發生錯誤，請稍後再試！');
@@ -740,10 +834,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Slot selector
+  const slotSelect = document.getElementById('upload-slot-select');
+  if (slotSelect) {
+    slotSelect.addEventListener('change', (e) => {
+      loadDeckIntoEditor(parseInt(e.target.value, 10));
+    });
+  }
+
   // Modal controls
   if (openModalBtn) openModalBtn.addEventListener('click', () => editDeckInSlot(1));
-  if (closeModalBtn) closeModalBtn.addEventListener('click', () => document.getElementById('deck-modal').classList.remove('active'));
-  if (cancelBtn) cancelBtn.addEventListener('click', () => document.getElementById('deck-modal').classList.remove('active'));
+  if (closeModalBtn) closeModalBtn.addEventListener('click', () => {
+    const m = document.getElementById('deck-modal');
+    if (m) m.classList.remove('active');
+  });
+  if (cancelBtn) cancelBtn.addEventListener('click', () => {
+    const m = document.getElementById('deck-modal');
+    if (m) m.classList.remove('active');
+  });
   if (confirmBtn) confirmBtn.addEventListener('click', submitDeckUpload);
 
   // Example templates
@@ -1205,6 +1313,11 @@ function saveCardPhotoModal() {
 }
 
 // Expose functions globally for onclick attributes
+window.initUploadDeckView = initUploadDeckView;
+window.updateSlotSelectDropdown = updateSlotSelectDropdown;
+window.loadDeckIntoEditor = loadDeckIntoEditor;
+window.viewDeckDetails = viewDeckDetails;
+window.closeDeckDetailModal = closeDeckDetailModal;
 window.adjustCardQuantity = adjustCardQuantity;
 window.deleteCardRow = deleteCardRow;
 window.openSwapCardPanel = openSwapCardPanel;
