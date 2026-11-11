@@ -710,6 +710,29 @@
     </div>
   </div>
 
+  <!-- Modal: Card Selection & Discard Modal (高級球、巢穴球專用檢索視窗) -->
+  <div class="card-detail-popup" id="card-selection-modal" style="z-index: 2500;">
+    <div class="card-detail-card" style="max-width: 680px; width: 94%; max-height: 88vh; background: #0f172a; border: 2px solid #3b82f6; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+        <h3 id="card-selection-modal-title" style="font-size: 1.25rem; font-weight: 800; color: #f59e0b; margin: 0; display: flex; align-items: center; gap: 8px;">
+          🟡 高級球：挑選卡牌
+        </h3>
+        <button type="button" class="modal-close" onclick="closeCardSelectionModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <div id="card-selection-modal-body" style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 6px 4px 6px 0; max-height: 60vh;">
+        <!-- 動態渲染由 JS 填入 -->
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #334155; padding-top: 12px; margin-top: 4px; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-secondary" onclick="closeCardSelectionModal()">取消退出</button>
+        <button type="button" id="card-selection-confirm-btn" class="btn btn-warning" style="font-weight: 800; font-size: 1rem; padding: 10px 20px;" disabled>
+          請選擇 2 張要丟棄的手牌 (0/2)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Attack Choice Modal -->
   <div class="card-detail-popup" id="attack-modal">
     <div class="card-detail-card" style="max-width: 480px;">

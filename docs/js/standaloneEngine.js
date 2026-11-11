@@ -829,7 +829,7 @@
       return { success: true };
     }
 
-    playItem(pIdx, cardId) {
+    playItem(pIdx, cardId, params = {}) {
       const p = this.players[pIdx];
       const opp = this.players[1 - pIdx];
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
@@ -837,7 +837,81 @@
       const item = p.hand.splice(idx, 1)[0];
       p.discard.push(item);
 
-      if (item.name.includes('傷藥') && p.active && p.active.damage > 0) {
+      if (item.name.includes('高級球') || item.id === 'ultra_ball' || item.effect === 'ultra_ball_search') {
+        const discardIds = (params && params.discardCardIds) || [];
+        const discardedNames = [];
+        discardIds.forEach(dId => {
+          const dIdx = p.hand.findIndex(c => c.instanceId === dId);
+          if (dIdx !== -1) {
+            const disc = p.hand.splice(dIdx, 1)[0];
+            p.discard.push(disc);
+            discardedNames.push(disc.name);
+          }
+        });
+        // 若為電腦AI或手牌未提供足額棄牌：自動從手牌丟至滿2張
+        while (discardedNames.length < 2 && p.hand.length > 0) {
+          const disc = p.hand.pop();
+          p.discard.push(disc);
+          discardedNames.push(disc.name);
+        }
+
+        let targetPokemon = null;
+        if (params && params.targetCardId) {
+          const tIdx = p.deck.findIndex(c => c.instanceId === params.targetCardId && c.supertype === 'pokemon');
+          if (tIdx !== -1) {
+            targetPokemon = p.deck.splice(tIdx, 1)[0];
+            p.hand.push(targetPokemon);
+          }
+        }
+        if (!targetPokemon && (!params || !params.targetCardId || p.isAi)) {
+          const autoIdx = p.deck.findIndex(c => c.supertype === 'pokemon');
+          if (autoIdx !== -1) {
+            targetPokemon = p.deck.splice(autoIdx, 1)[0];
+            p.hand.push(targetPokemon);
+          }
+        }
+
+        p.deck = p.deck.sort(() => Math.random() - 0.5);
+
+        const discardStr = discardedNames.length > 0 ? `丟棄了「${discardedNames.join('」與「')}」` : '丟棄了 2 張手牌';
+        if (targetPokemon) {
+          this.log(`🟡「高級球」：${p.name} ${discardStr}，從牌庫挑選了「${targetPokemon.name}」加入手牌，並重洗牌庫！`);
+        } else {
+          this.log(`🟡「高級球」：${p.name} ${discardStr}，檢索牌庫後未選擇寶可夢，重洗牌庫。`);
+        }
+      } else if (item.name.includes('巢穴球') || item.id === 'nest_ball' || item.effect === 'search_basic_bench') {
+        if (p.bench.length >= 5) {
+          this.log(`⚾「巢穴球」：${p.name} 備戰區已滿（上限 5 隻），無法放置！`);
+        } else {
+          let basicInDeck = null;
+          if (params && params.targetCardId) {
+            const bIdx = p.deck.findIndex(c => c.instanceId === params.targetCardId && c.supertype === 'pokemon' && (c.subtypes || []).includes('Basic'));
+            if (bIdx !== -1) {
+              basicInDeck = p.deck.splice(bIdx, 1)[0];
+            }
+          }
+          if (!basicInDeck) {
+            const bIdx = p.deck.findIndex(c => c.supertype === 'pokemon' && (c.subtypes || []).includes('Basic'));
+            if (bIdx !== -1) {
+              basicInDeck = p.deck.splice(bIdx, 1)[0];
+            }
+          }
+          if (basicInDeck) {
+            p.bench.push({
+              ...basicInDeck,
+              attachedEnergy: [],
+              attachedTool: null,
+              damage: 0,
+              turnPlayed: this.turnNumber
+            });
+            p.deck = p.deck.sort(() => Math.random() - 0.5);
+            this.log(`⚾「巢穴球」：${p.name} 從牌庫檢索了基礎寶可夢「${basicInDeck.name}」直接放置於備戰區，並重洗牌庫！`);
+          } else {
+            p.deck = p.deck.sort(() => Math.random() - 0.5);
+            this.log(`⚾「巢穴球」：${p.name} 牌庫中沒有基礎寶可夢。`);
+          }
+        }
+      } else if (item.name.includes('傷藥') && p.active && p.active.damage > 0) {
         p.active.damage = Math.max(0, p.active.damage - 30);
         this.log(`💊「傷藥」：為「${p.active.name}」恢復了 30 點 HP。`);
       } else if (item.name.includes('交替') && p.bench.length > 0) {
@@ -988,6 +1062,7 @@
           name: p.name,
           isAi: p.isAi,
           deckCount: p.deck.length,
+          deckCards: idx === viewerIndex ? p.deck.map(c => ({ ...c })) : [],
           prizeCount: p.prizes.length,
           discardCount: p.discard.length,
           discard: p.discard,
@@ -1192,7 +1267,7 @@
       if (body.action === 'bench') res = g.playBasic(pIdx, body.cardInstanceId);
       else if (body.action === 'attach_energy') res = g.attachEnergy(pIdx, body.cardInstanceId, body.targetSlot);
       else if (body.action === 'evolve') res = g.evolve(pIdx, body.cardInstanceId, body.targetSlot);
-      else if (body.action === 'play_item') res = g.playItem(pIdx, body.cardInstanceId);
+      else if (body.action === 'play_item') res = g.playItem(pIdx, body.cardInstanceId, body.params || body);
       else if (body.action === 'play_supporter') res = g.playSupporter(pIdx, body.cardInstanceId);
       else if (body.action === 'retreat') res = g.retreat(pIdx, body.benchIndex);
       else if (body.action === 'attack') res = g.attack(pIdx, body.attackIndex || 0);

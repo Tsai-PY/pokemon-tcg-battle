@@ -369,7 +369,7 @@ const server = http.createServer(async (req, res) => {
         actionRes = game.attachTool(pIdx, body.cardInstanceId, body.targetSlot);
         break;
       case 'play_item':
-        actionRes = game.playItem(pIdx, body.cardInstanceId, body.params);
+        actionRes = game.playItem(pIdx, body.cardInstanceId, body.params || body);
         break;
       case 'play_supporter':
         actionRes = game.playSupporter(pIdx, body.cardInstanceId, body.params);
@@ -502,7 +502,7 @@ wss.on('connection', (ws) => {
             actionRes = game.attachTool(pIdx, payload.cardInstanceId, payload.targetSlot);
             break;
           case 'play_item':
-            actionRes = game.playItem(pIdx, payload.cardInstanceId, payload.params);
+            actionRes = game.playItem(pIdx, payload.cardInstanceId, payload.params || payload);
             break;
           case 'play_supporter':
             actionRes = game.playSupporter(pIdx, payload.cardInstanceId, payload.params);

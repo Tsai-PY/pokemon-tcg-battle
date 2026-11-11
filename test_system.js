@@ -143,6 +143,40 @@ assert.strictEqual(mulliganGame.players[0].prizes.length, 6, '玩家1獎賞卡�
 assert.strictEqual(mulliganGame.players[1].prizes.length, 6, '玩家2獎賞卡應為6張');
 console.log(`✓ 重新開局後雙方戰鬥場皆已成功放置寶可夢 (P1: ${mulliganGame.players[0].active.name}, P2: ${mulliganGame.players[1].active.name})`);
 
+console.log('\n--- 5. 測試「高級球」丟棄 2 張手牌並從牌庫挑選寶可夢 ---');
+const ubGame = new PTCGGame('test_game_ub', {
+  id: 'ub_p1',
+  name: '訓練家小智',
+  deck: decks[0]
+}, {
+  id: 'ub_p2',
+  name: '電腦AI',
+  isAi: true,
+  deck: decks[1]
+});
+ubGame.startSetup();
+const ubPlayer = ubGame.players[0];
+const targetPoke = ubPlayer.deck.find(c => c.supertype === 'pokemon');
+assert(targetPoke, '牌庫中應有寶可夢');
+
+ubPlayer.hand = [
+  { instanceId: 'ub_card', id: 'ultra_ball', name: '高級球', supertype: 'trainer', subtypes: ['Item'] },
+  { instanceId: 'd1', name: '卡片A', supertype: 'energy' },
+  { instanceId: 'd2', name: '卡片B', supertype: 'energy' }
+];
+
+ubGame.activePlayerIndex = 0;
+const ubRes = ubGame.playItem(0, 'ub_card', {
+  discardCardIds: ['d1', 'd2'],
+  targetCardId: targetPoke.instanceId
+});
+assert(ubRes.success, '高級球發動應成功');
+assert(ubPlayer.hand.some(c => c.instanceId === targetPoke.instanceId), '目標寶可夢應已加入手牌');
+assert.strictEqual(ubPlayer.hand.length, 1, '手牌應只剩檢索加入的該隻寶可夢');
+assert(ubPlayer.discard.some(c => c.instanceId === 'ub_card'), '高級球應在棄牌堆');
+assert(ubPlayer.discard.some(c => c.instanceId === 'd1' || c.instanceId === 'd2'), '丟棄的2張手牌應在棄牌堆');
+console.log(`✓ 成功發動高級球：丟棄2張手牌並精準從牌庫挑選「${targetPoke.name}」加入手牌！`);
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

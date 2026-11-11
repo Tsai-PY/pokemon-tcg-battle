@@ -105,7 +105,7 @@ function executeP2PAction(g, pIdx, actionType, payload) {
   if (actionType === 'bench') res = g.playBasic(pIdx, payload.cardInstanceId);
   else if (actionType === 'attach_energy') res = g.attachEnergy(pIdx, payload.cardInstanceId, payload.targetSlot);
   else if (actionType === 'evolve') res = g.evolve(pIdx, payload.cardInstanceId, payload.targetSlot);
-  else if (actionType === 'play_item') res = g.playItem(pIdx, payload.cardInstanceId);
+  else if (actionType === 'play_item') res = g.playItem(pIdx, payload.cardInstanceId, payload.params || payload);
   else if (actionType === 'play_supporter') res = g.playSupporter(pIdx, payload.cardInstanceId);
   else if (actionType === 'retreat') res = g.retreat(pIdx, payload.benchIndex);
   else if (actionType === 'attack') res = g.attack(pIdx, payload.attackIndex || 0);
@@ -153,7 +153,8 @@ async function sendGameAction(actionType, payload = {}) {
       body: JSON.stringify({
         action: actionType,
         playerIndex: currentPlayerIndex,
-        ...payload
+        ...payload,
+        params: payload
       })
     });
     const data = await res.json();
@@ -429,7 +430,22 @@ function inspectCard(card, location, slotIndex = null) {
 
     // 5. Play Item Card
     if (card.supertype === 'trainer' && card.subtypes && card.subtypes.includes('Item')) {
-      actionsHtml += `<button class="btn btn-primary" onclick="doPlayItem('${card.instanceId}')">🎒 使用此物品卡</button>`;
+      if (card.name.includes('高級球') || card.id === 'ultra_ball') {
+        const discardableHand = (player.hand || []).filter(c => c.instanceId !== card.instanceId);
+        if (discardableHand.length < 2) {
+          actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">🟡 高級球（其他手牌僅剩 ${discardableHand.length} 張，不足 2 張無法丟棄）</button>`;
+        } else {
+          actionsHtml += `<button class="btn btn-warning" onclick="openUltraBallModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);">🟡 使用高級球（丟 2 張手牌，從牌庫選 1 隻寶可夢）</button>`;
+        }
+      } else if (card.name.includes('巢穴球') || card.id === 'nest_ball') {
+        if (player.bench.length >= 5) {
+          actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">⚾ 巢穴球（備戰區已滿 5 隻）</button>`;
+        } else {
+          actionsHtml += `<button class="btn btn-primary" onclick="openNestBallModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: #fff;">⚾ 使用巢穴球（從牌庫選 1 隻基礎寶可夢放置備戰區）</button>`;
+        }
+      } else {
+        actionsHtml += `<button class="btn btn-primary" onclick="doPlayItem('${card.instanceId}')">🎒 使用此物品卡</button>`;
+      }
     }
 
     // 6. Play Supporter Card (Max 1 per turn, not Turn 1)
@@ -568,8 +584,368 @@ function doAttachTool(cardInstanceId, targetSlot) {
 
 function doPlayItem(cardInstanceId) {
   closeCardActionModal();
+  const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+  const card = player && player.hand ? player.hand.find(c => c.instanceId === cardInstanceId) : null;
+  if (card && (card.name.includes('高級球') || card.id === 'ultra_ball')) {
+    openUltraBallModal(cardInstanceId);
+    return;
+  }
+  if (card && (card.name.includes('巢穴球') || card.id === 'nest_ball')) {
+    openNestBallModal(cardInstanceId);
+    return;
+  }
   sfx.playCard();
   sendGameAction('play_item', { cardInstanceId });
+}
+
+// ================= ULTRA BALL & SEARCH MODALS =================
+let searchModalState = {
+  mode: null, // 'ultra_ball' | 'nest_ball'
+  cardInstanceId: null,
+  selectedDiscardIds: [],
+  selectedTargetId: null
+};
+
+function closeCardSelectionModal() {
+  const modal = document.getElementById('card-selection-modal');
+  if (modal) modal.classList.remove('active');
+  searchModalState = { mode: null, cardInstanceId: null, selectedDiscardIds: [], selectedTargetId: null };
+}
+
+function openUltraBallModal(cardInstanceId) {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  const discardableHand = (player.hand || []).filter(c => c.instanceId !== cardInstanceId);
+  if (discardableHand.length < 2) {
+    alert('⚠️ 手牌不足！使用「高級球」必須丟棄 2 張其他手牌。');
+    return;
+  }
+
+  const deckCards = player.deckCards || [];
+  const deckPokemons = deckCards.filter(c => c.supertype === 'pokemon');
+
+  searchModalState = {
+    mode: 'ultra_ball',
+    cardInstanceId,
+    selectedDiscardIds: [],
+    selectedTargetId: null
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `🟡 高級球（Ultra Ball）：挑選丟棄手牌與牌庫寶可夢`;
+
+  // Render modal content
+  body.innerHTML = `
+    <!-- Step 1: Discard 2 Cards -->
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #f59e0b; display: flex; align-items: center; gap: 6px;">
+          <span>① 請選擇要丟棄的 2 張手牌</span>
+        </span>
+        <span id="ub-discard-count-badge" style="background: #b45309; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: bold;">
+          已選擇 0 / 2 張
+        </span>
+      </div>
+      <div id="ub-hand-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; padding: 4px;">
+        ${discardableHand.map(c => `
+          <div class="ub-card-choice ub-discard-item" id="ub-discard-${c.instanceId}" onclick="toggleUltraBallDiscard('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease; user-select: none;">
+            <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+              ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">${(c.supertype === 'pokemon' ? '🐾' : c.supertype === 'energy' ? '⚡' : '🎒')}</span>`}
+            </div>
+            <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+            <div style="font-size: 0.7rem; color: #94a3b8;">${c.supertype === 'pokemon' ? (c.hp ? `HP ${c.hp}` : '寶可夢') : (c.supertype === 'energy' ? '能量卡' : '訓練家卡')}</div>
+            <div class="ub-discard-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.5);">✓ 丟棄</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Step 2: Search Pokemon from Deck -->
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #10b981; display: flex; align-items: center; gap: 6px;">
+          <span>② 從牌庫中挑選 1 隻寶可夢加入手牌</span>
+        </span>
+        <span style="color: #94a3b8; font-size: 0.85rem;">
+          牌庫剩餘 ${deckPokemons.length} 隻寶可夢
+        </span>
+      </div>
+      ${deckPokemons.length === 0 ? `
+        <div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; text-align: center; font-size: 0.9rem;">
+          ⚠️ 牌庫中目前沒有寶可夢卡牌（依官方規則將洗牌後結束檢索）
+        </div>
+      ` : `
+        <div id="ub-deck-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 240px; overflow-y: auto; padding: 4px;">
+          ${deckPokemons.map(c => `
+            <div class="ub-card-choice ub-target-item" id="ub-target-${c.instanceId}" onclick="selectUltraBallTarget('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease; user-select: none;">
+              <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">🐾</span>`}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+              <div style="font-size: 0.7rem; color: #38bdf8;">${c.hp ? `HP ${c.hp}` : ''} ${(c.subtypes || []).join(' ')}</div>
+              <div class="ub-target-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #10b981; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.5);">★ 選定</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+
+  updateUltraBallModalUI();
+  modal.classList.add('active');
+}
+
+function toggleUltraBallDiscard(cardInstanceId) {
+  const list = searchModalState.selectedDiscardIds;
+  const idx = list.indexOf(cardInstanceId);
+  if (idx !== -1) {
+    list.splice(idx, 1);
+  } else {
+    if (list.length >= 2) {
+      // 若已選 2 張，替換第 2 張或提醒
+      list.shift();
+    }
+    list.push(cardInstanceId);
+  }
+  updateUltraBallModalUI();
+}
+
+function selectUltraBallTarget(cardInstanceId) {
+  if (searchModalState.selectedTargetId === cardInstanceId) {
+    searchModalState.selectedTargetId = null;
+  } else {
+    searchModalState.selectedTargetId = cardInstanceId;
+  }
+  updateUltraBallModalUI();
+}
+
+function updateUltraBallModalUI() {
+  const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+  if (!player) return;
+
+  const deckCards = player.deckCards || [];
+  const deckPokemons = deckCards.filter(c => c.supertype === 'pokemon');
+
+  // 1. Update Discard Selection Styles
+  const discardGrid = document.getElementById('ub-hand-grid');
+  if (discardGrid) {
+    discardGrid.querySelectorAll('.ub-discard-item').forEach(el => {
+      const cId = el.id.replace('ub-discard-', '');
+      const isSelected = searchModalState.selectedDiscardIds.includes(cId);
+      el.style.borderColor = isSelected ? '#ef4444' : '#334155';
+      el.style.background = isSelected ? 'rgba(239, 68, 68, 0.15)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 10px rgba(239, 68, 68, 0.5)' : 'none';
+      const badge = el.querySelector('.ub-discard-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+
+  const countBadge = document.getElementById('ub-discard-count-badge');
+  if (countBadge) {
+    const count = searchModalState.selectedDiscardIds.length;
+    countBadge.textContent = `已選擇 ${count} / 2 張`;
+    countBadge.style.background = count === 2 ? '#10b981' : '#b45309';
+  }
+
+  // 2. Update Target Selection Styles
+  const deckGrid = document.getElementById('ub-deck-grid');
+  if (deckGrid) {
+    deckGrid.querySelectorAll('.ub-target-item').forEach(el => {
+      const cId = el.id.replace('ub-target-', '');
+      const isSelected = searchModalState.selectedTargetId === cId;
+      el.style.borderColor = isSelected ? '#10b981' : '#334155';
+      el.style.background = isSelected ? 'rgba(16, 185, 129, 0.18)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(16, 185, 129, 0.6)' : 'none';
+      const badge = el.querySelector('.ub-target-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+
+  // 3. Update Confirm Button
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    const discardCount = searchModalState.selectedDiscardIds.length;
+    const hasTarget = Boolean(searchModalState.selectedTargetId) || deckPokemons.length === 0;
+
+    if (discardCount < 2) {
+      confirmBtn.disabled = true;
+      confirmBtn.className = 'btn btn-secondary';
+      confirmBtn.style.background = '#475569';
+      confirmBtn.textContent = `請選擇 2 張要丟棄的手牌 (${discardCount}/2)`;
+      confirmBtn.onclick = null;
+    } else if (!hasTarget) {
+      confirmBtn.disabled = true;
+      confirmBtn.className = 'btn btn-secondary';
+      confirmBtn.style.background = '#475569';
+      confirmBtn.textContent = `請在步驟 ② 挑選 1 隻寶可夢`;
+      confirmBtn.onclick = null;
+    } else {
+      confirmBtn.disabled = false;
+      confirmBtn.className = 'btn btn-warning';
+      confirmBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+      confirmBtn.style.color = '#fff';
+      let targetName = '寶可夢';
+      if (searchModalState.selectedTargetId) {
+        const targetCard = deckPokemons.find(c => c.instanceId === searchModalState.selectedTargetId);
+        if (targetCard) targetName = targetCard.name;
+      }
+      confirmBtn.textContent = searchModalState.selectedTargetId 
+        ? `✨ 確認丟棄手牌並將「${targetName}」加入手牌`
+        : `✨ 確認丟棄手牌並完成檢索（牌庫無怪）`;
+      confirmBtn.onclick = confirmUltraBallAction;
+    }
+  }
+}
+
+function confirmUltraBallAction() {
+  if (searchModalState.selectedDiscardIds.length !== 2) {
+    alert('請選擇 2 張要丟棄的手牌！');
+    return;
+  }
+  const payload = {
+    cardInstanceId: searchModalState.cardInstanceId,
+    discardCardIds: searchModalState.selectedDiscardIds,
+    targetCardId: searchModalState.selectedTargetId
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('play_item', payload);
+}
+
+// Nest Ball Modal
+function openNestBallModal(cardInstanceId) {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  if (player.bench.length >= 5) {
+    alert('⚠️ 備戰區已滿（上限 5 隻），無法使用巢穴球！');
+    return;
+  }
+
+  const deckCards = player.deckCards || [];
+  const basicPokemons = deckCards.filter(c => c.supertype === 'pokemon' && (c.subtypes || []).includes('Basic'));
+
+  searchModalState = {
+    mode: 'nest_ball',
+    cardInstanceId,
+    selectedDiscardIds: [],
+    selectedTargetId: null
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `⚾ 巢穴球（Nest Ball）：從牌庫挑選基礎寶可夢`;
+
+  body.innerHTML = `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #10b981;">
+          請挑選 1 隻基礎寶可夢直接放置於備戰區（目前備戰區 ${player.bench.length}/5）
+        </span>
+        <span style="color: #94a3b8; font-size: 0.85rem;">
+          牌庫共 ${basicPokemons.length} 隻基礎寶可夢
+        </span>
+      </div>
+      ${basicPokemons.length === 0 ? `
+        <div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; text-align: center;">
+          ⚠️ 牌庫中目前沒有基礎寶可夢卡牌（依官方規則將洗牌後結束檢索）
+        </div>
+      ` : `
+        <div id="nb-deck-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 320px; overflow-y: auto; padding: 4px;">
+          ${basicPokemons.map(c => `
+            <div class="nb-target-item" id="nb-target-${c.instanceId}" onclick="selectNestBallTarget('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease;">
+              <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">🐾</span>`}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+              <div style="font-size: 0.7rem; color: #10b981;">${c.hp ? `HP ${c.hp}` : ''} 基礎</div>
+              <div class="nb-target-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #10b981; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">★ 選定</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+
+  updateNestBallModalUI();
+  modal.classList.add('active');
+}
+
+function selectNestBallTarget(cardInstanceId) {
+  if (searchModalState.selectedTargetId === cardInstanceId) {
+    searchModalState.selectedTargetId = null;
+  } else {
+    searchModalState.selectedTargetId = cardInstanceId;
+  }
+  updateNestBallModalUI();
+}
+
+function updateNestBallModalUI() {
+  const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+  if (!player) return;
+  const deckCards = player.deckCards || [];
+  const basicPokemons = deckCards.filter(c => c.supertype === 'pokemon' && (c.subtypes || []).includes('Basic'));
+
+  const grid = document.getElementById('nb-deck-grid');
+  if (grid) {
+    grid.querySelectorAll('.nb-target-item').forEach(el => {
+      const cId = el.id.replace('nb-target-', '');
+      const isSelected = searchModalState.selectedTargetId === cId;
+      el.style.borderColor = isSelected ? '#10b981' : '#334155';
+      el.style.background = isSelected ? 'rgba(16, 185, 129, 0.18)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(16, 185, 129, 0.6)' : 'none';
+      const badge = el.querySelector('.nb-target-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    const hasTarget = Boolean(searchModalState.selectedTargetId) || basicPokemons.length === 0;
+    if (!hasTarget) {
+      confirmBtn.disabled = true;
+      confirmBtn.className = 'btn btn-secondary';
+      confirmBtn.style.background = '#475569';
+      confirmBtn.textContent = '請點選 1 隻要放置備戰區的基礎寶可夢';
+      confirmBtn.onclick = null;
+    } else {
+      confirmBtn.disabled = false;
+      confirmBtn.className = 'btn btn-success';
+      confirmBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      confirmBtn.style.color = '#fff';
+      let targetName = '基礎寶可夢';
+      if (searchModalState.selectedTargetId) {
+        const targetCard = basicPokemons.find(c => c.instanceId === searchModalState.selectedTargetId);
+        if (targetCard) targetName = targetCard.name;
+      }
+      confirmBtn.textContent = searchModalState.selectedTargetId
+        ? `✨ 確認放置「${targetName}」至備戰區`
+        : `✨ 確認結束檢索（牌庫無基礎寶可夢）`;
+      confirmBtn.onclick = confirmNestBallAction;
+    }
+  }
+}
+
+function confirmNestBallAction() {
+  const payload = {
+    cardInstanceId: searchModalState.cardInstanceId,
+    targetCardId: searchModalState.selectedTargetId
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('play_item', payload);
 }
 
 function doPlaySupporter(cardInstanceId) {
