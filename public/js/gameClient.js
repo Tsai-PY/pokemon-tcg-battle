@@ -7,6 +7,74 @@ let currentPlayerIndex = 0; // 0 (player 1) or 1 (player 2)
 let socket = null;
 let selectedHandCard = null;
 
+
+// ==================== PTCG 招式能量啟動條件判定 ====================
+function getEnergyType(card) {
+  if (!card) return 'Colorless';
+  if (card.energyType) return card.energyType;
+  const name = card.name || '';
+  if (/草/i.test(name)) return 'Grass';
+  if (/電|雷/i.test(name)) return 'Lightning';
+  if (/鋼|鐵/i.test(name)) return 'Metal';
+  if (/火/i.test(name)) return 'Fire';
+  if (/水|冰/i.test(name)) return 'Water';
+  if (/超|妖/i.test(name)) return 'Psychic';
+  if (/鬥|石/i.test(name)) return 'Fighting';
+  if (/惡|暗/i.test(name)) return 'Darkness';
+  return 'Colorless';
+}
+
+function formatEnergyType(type) {
+  const map = {
+    'Grass': '草',
+    'Lightning': '電',
+    'Metal': '鋼',
+    'Fire': '火',
+    'Water': '水',
+    'Psychic': '超',
+    'Fighting': '鬥',
+    'Darkness': '惡',
+    'Dragon': '龍',
+    'Colorless': '無色'
+  };
+  return map[type] || type;
+}
+
+function checkEnergyCost(attackCost = [], attachedEnergies = []) {
+  if (!attackCost || attackCost.length === 0) return { canPay: true, missing: [] };
+
+  const available = (attachedEnergies || []).map(e => getEnergyType(e));
+  const specificCosts = attackCost.filter(c => c !== 'Colorless');
+  const colorlessCostCount = attackCost.filter(c => c === 'Colorless').length;
+
+  const missing = [];
+  const pool = [...available];
+
+  // 1. 優先匹配指定屬性能量
+  for (const costType of specificCosts) {
+    const idx = pool.indexOf(costType);
+    if (idx !== -1) {
+      pool.splice(idx, 1);
+    } else {
+      missing.push(costType);
+    }
+  }
+
+  // 2. 剩餘任意屬性能量皆可用於抵扣「無色(Colorless)」能量
+  const remainingColorlessNeeded = Math.max(0, colorlessCostCount - pool.length);
+  for (let i = 0; i < remainingColorlessNeeded; i++) {
+    missing.push('Colorless');
+  }
+
+  return {
+    canPay: missing.length === 0,
+    missing,
+    attachedCount: attachedEnergies ? attachedEnergies.length : 0,
+    requiredCount: attackCost.length
+  };
+}
+
+
 // Start a game from Matchmaking screen
 async function startGame() {
   const token = localStorage.getItem('ptcg_token');
@@ -961,27 +1029,62 @@ function openAttackChoiceModal() {
   if (!player.active) return;
 
   const attacks = player.active.attacks || [];
+  const attachedEnergies = player.active.attachedEnergy || [];
   const listEl = document.getElementById('attack-choices-list');
   const modal = document.getElementById('attack-modal');
   if (!listEl || !modal) return;
 
   listEl.innerHTML = '';
   attacks.forEach((at, idx) => {
+    const check = checkEnergyCost(at.cost, attachedEnergies);
+    const costZh = (at.cost || []).map(formatEnergyType).join('、');
+    const missingZh = (check.missing || []).map(formatEnergyType).join('、');
+
     const btn = document.createElement('button');
-    btn.className = 'btn btn-accent';
     btn.style.width = '100%';
     btn.style.textAlign = 'left';
     btn.style.display = 'flex';
     btn.style.justifyContent = 'space-between';
-    btn.innerHTML = `
-      <span><strong>${at.name}</strong> [${(at.cost || []).join('、')}]</span>
-      <span style="font-weight: 800; color: #dc2626;">${at.damage || 0} 點傷害</span>
-    `;
-    btn.onclick = () => {
-      modal.classList.remove('active');
-      sfx.playAttack();
-      sendGameAction('attack', { attackIndex: idx });
-    };
+    btn.style.alignItems = 'center';
+    btn.style.padding = '12px 16px';
+    btn.style.borderRadius = '8px';
+    btn.style.marginBottom = '8px';
+
+    if (check.canPay) {
+      btn.className = 'btn btn-accent';
+      btn.innerHTML = `
+        <div>
+          <div style="font-size: 1rem; font-weight: bold;">${at.name} <span style="font-size: 0.85rem; color: #fde68a;">[${costZh || '無需求'}]</span></div>
+          <div style="font-size: 0.75rem; color: #a7f3d0; margin-top: 2px;">⚡ 能量條件已滿足（身上已有 ${attachedEnergies.length} 個能量）</div>
+        </div>
+        <span style="font-weight: 800; color: #dc2626; font-size: 1.1rem;">${at.damage || 0} 點傷害</span>
+      `;
+      btn.onclick = () => {
+        modal.classList.remove('active');
+        sfx.playAttack();
+        sendGameAction('attack', { attackIndex: idx });
+      };
+    } else {
+      btn.className = 'btn btn-secondary';
+      btn.style.opacity = '0.55';
+      btn.style.cursor = 'not-allowed';
+      btn.innerHTML = `
+        <div>
+          <div style="font-size: 1rem; font-weight: bold; color: #94a3b8;">${at.name} <span style="font-size: 0.85rem; color: #cbd5e1;">[${costZh || '無需求'}]</span></div>
+          <div style="font-size: 0.75rem; color: #f87171; margin-top: 2px;">🔒 尚未滿足啟動條件（缺少：${missingZh}）</div>
+        </div>
+        <span style="font-weight: 800; color: #94a3b8; font-size: 1.1rem;">${at.damage || 0} 點傷害</span>
+      `;
+      btn.onclick = () => {
+        alert(`❌【尚未達到招式啟動條件】
+
+招式「${at.name}」需要能量：[${costZh}]
+目前身上僅附加：[${attachedEnergies.map(e => formatEnergyType(getEnergyType(e))).join('、') || '無'}]
+尚缺少：[${missingZh}]
+
+請在戰鬥回合中先將對應能量卡附加到此寶可夢身上！`);
+      };
+    }
     listEl.appendChild(btn);
   });
 

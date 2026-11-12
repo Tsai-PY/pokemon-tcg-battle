@@ -1599,6 +1599,74 @@
   }
 ];
 
+
+// ==================== PTCG 招式能量啟動條件判定 ====================
+function getEnergyType(card) {
+  if (!card) return 'Colorless';
+  if (card.energyType) return card.energyType;
+  const name = card.name || '';
+  if (/草/i.test(name)) return 'Grass';
+  if (/電|雷/i.test(name)) return 'Lightning';
+  if (/鋼|鐵/i.test(name)) return 'Metal';
+  if (/火/i.test(name)) return 'Fire';
+  if (/水|冰/i.test(name)) return 'Water';
+  if (/超|妖/i.test(name)) return 'Psychic';
+  if (/鬥|石/i.test(name)) return 'Fighting';
+  if (/惡|暗/i.test(name)) return 'Darkness';
+  return 'Colorless';
+}
+
+function formatEnergyType(type) {
+  const map = {
+    'Grass': '草',
+    'Lightning': '電',
+    'Metal': '鋼',
+    'Fire': '火',
+    'Water': '水',
+    'Psychic': '超',
+    'Fighting': '鬥',
+    'Darkness': '惡',
+    'Dragon': '龍',
+    'Colorless': '無色'
+  };
+  return map[type] || type;
+}
+
+function checkEnergyCost(attackCost = [], attachedEnergies = []) {
+  if (!attackCost || attackCost.length === 0) return { canPay: true, missing: [] };
+
+  const available = (attachedEnergies || []).map(e => getEnergyType(e));
+  const specificCosts = attackCost.filter(c => c !== 'Colorless');
+  const colorlessCostCount = attackCost.filter(c => c === 'Colorless').length;
+
+  const missing = [];
+  const pool = [...available];
+
+  // 1. 優先匹配指定屬性能量
+  for (const costType of specificCosts) {
+    const idx = pool.indexOf(costType);
+    if (idx !== -1) {
+      pool.splice(idx, 1);
+    } else {
+      missing.push(costType);
+    }
+  }
+
+  // 2. 剩餘任意屬性能量皆可用於抵扣「無色(Colorless)」能量
+  const remainingColorlessNeeded = Math.max(0, colorlessCostCount - pool.length);
+  for (let i = 0; i < remainingColorlessNeeded; i++) {
+    missing.push('Colorless');
+  }
+
+  return {
+    canPay: missing.length === 0,
+    missing,
+    attachedCount: attachedEnergies ? attachedEnergies.length : 0,
+    requiredCount: attackCost.length
+  };
+}
+
+
 // Helper: Normalize name for matching
 function normalizeCardName(name) {
   if (!name) return '';
@@ -2462,6 +2530,15 @@ function findCardByName(rawName) {
       if (!p.active) return { success: false, message: '無戰鬥寶可夢' };
 
       const at = (p.active.attacks || [])[attackIdx] || { name: '撞擊', damage: 30 };
+      const costCheck = checkEnergyCost(at.cost, p.active.attachedEnergy);
+      if (!costCheck.canPay) {
+        const costZh = (at.cost || []).map(formatEnergyType).join('、');
+        const missZh = (costCheck.missing || []).map(formatEnergyType).join('、');
+        return {
+          success: false,
+          message: `招式「${at.name}」能量未達啟動條件！（需要：${costZh}，缺少：${missZh}）`
+        };
+      }
       this.log(`⚔️【攻擊】${p.name} 的「${p.active.name}」使出【${at.name}】！`);
 
       let dmg = typeof at.damage === 'number' ? at.damage : 30;
@@ -2541,16 +2618,19 @@ function findCardByName(rawName) {
       // 3. 攻擊或結束回合（第一回合先攻依規則不可使出招式，直接結束回合換玩家回合）
       if (this.turnNumber > 1 && ai.active) {
         const attacks = ai.active.attacks || [];
-        let bestIdx = 0;
-        let maxDmg = -1;
+        const usableAttacks = [];
         attacks.forEach((at, idx) => {
-          const d = typeof at.damage === 'number' ? at.damage : 0;
-          if (d > maxDmg) {
-            maxDmg = d;
-            bestIdx = idx;
+          if (checkEnergyCost(at.cost, ai.active.attachedEnergy).canPay) {
+            usableAttacks.push({ at, idx });
           }
         });
-        this.attack(1, bestIdx);
+        if (usableAttacks.length > 0) {
+          usableAttacks.sort((a, b) => (b.at.damage || 0) - (a.at.damage || 0));
+          this.attack(1, usableAttacks[0].idx);
+        } else {
+          this.log(`⚠️ 電腦的「${ai.active.name}」目前能量尚未滿足任何招式啟動條件。`);
+          this.nextTurn();
+        }
       } else {
         this.nextTurn();
       }
