@@ -172,6 +172,7 @@ function executeP2PAction(g, pIdx, actionType, payload) {
   let res = { success: false, message: '未知操作' };
   if (actionType === 'bench') res = g.playBasic(pIdx, payload.cardInstanceId);
   else if (actionType === 'attach_energy') res = g.attachEnergy(pIdx, payload.cardInstanceId, payload.targetSlot);
+  else if (actionType === 'attach_tool') res = g.attachTool(pIdx, payload.cardInstanceId, payload.targetSlot);
   else if (actionType === 'evolve') res = g.evolve(pIdx, payload.cardInstanceId, payload.targetSlot);
   else if (actionType === 'play_item') res = g.playItem(pIdx, payload.cardInstanceId, payload.params || payload);
   else if (actionType === 'play_supporter') res = g.playSupporter(pIdx, payload.cardInstanceId);
@@ -485,7 +486,11 @@ function inspectCard(card, location, slotIndex = null) {
     }
 
     // 4. Attach Tool
-    if (card.supertype === 'trainer' && card.subtypes && card.subtypes.includes('Tool')) {
+    const isToolCard = (card.supertype === 'trainer' && card.subtypes && card.subtypes.includes('Tool')) ||
+                       card.supertype === 'tool' ||
+                       (card.subtypes && card.subtypes.includes('Tool')) ||
+                       (card.name && (card.name.includes('護符') || card.name.includes('鈴鐺響') || card.name.includes('演進')));
+    if (isToolCard) {
       if (player.active && !player.active.attachedTool) {
         actionsHtml += `<button class="btn btn-secondary" onclick="doAttachTool('${card.instanceId}', 'active')">🛡️ 貼在戰鬥場「${player.active.name}」</button>`;
       }

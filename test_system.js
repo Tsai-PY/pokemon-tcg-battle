@@ -177,6 +177,58 @@ assert(ubPlayer.discard.some(c => c.instanceId === 'ub_card'), '高級球應在�
 assert(ubPlayer.discard.some(c => c.instanceId === 'd1' || c.instanceId === 'd2'), '丟棄的2張手牌應在棄牌堆');
 console.log(`✓ 成功發動高級球：丟棄2張手牌並精準從牌庫挑選「${targetPoke.name}」加入手牌！`);
 
+console.log('\n--- 6. 測試寶可夢道具卡「勇氣護符」貼附與生命值提升規則 ---');
+const toolGame = new PTCGGame('test_game_tool', {
+  id: 'tool_p1',
+  name: '小明',
+  deck: decks[0]
+}, {
+  id: 'tool_p2',
+  name: '電腦AI',
+  isAi: true,
+  deck: decks[1]
+});
+toolGame.startSetup();
+const toolPlayer = toolGame.players[0];
+toolGame.activePlayerIndex = 0;
+
+// 設置基礎寶可夢「密勒頓ex」在戰鬥場 (基礎生命 220)
+toolPlayer.active = {
+  instanceId: 'miraidon_1',
+  id: 'miraidon_ex',
+  name: '密勒頓ex',
+  supertype: 'pokemon',
+  subtypes: ['Basic', 'ex'],
+  hp: 220,
+  damage: 0,
+  attachedEnergy: [],
+  attachedTool: null,
+  maxHpBonus: 0
+};
+
+// 手牌給予 2 張「勇氣護符」
+const braveryCharm1 = { instanceId: 'bc_1', id: 'bravery_charm', name: '勇氣護符', supertype: 'trainer', subtypes: ['Tool'] };
+const braveryCharm2 = { instanceId: 'bc_2', id: 'bravery_charm', name: '勇氣護符', supertype: 'trainer', subtypes: ['Tool'] };
+toolPlayer.hand = [braveryCharm1, braveryCharm2];
+
+// 執行貼附第 1 張勇氣護符
+const attachRes1 = toolGame.attachTool(0, 'bc_1', 'active');
+assert(attachRes1.success, '貼附勇氣護符應成功');
+assert.strictEqual(toolPlayer.active.attachedTool.name, '勇氣護符', '目標寶可夢應已貼上勇氣護符');
+assert.strictEqual(toolPlayer.active.maxHpBonus, 50, '基礎寶可夢貼上勇氣護符後 maxHpBonus 應為 50');
+
+// 檢查 getState 輸出的 currentHp 與 maxHp
+const p1State = toolGame.getState(0).players[0];
+assert.strictEqual(p1State.active.maxHp, 270, '有效最大生命值應從 220 提升至 270');
+assert.strictEqual(p1State.active.currentHp, 270, '有效當前生命值應為 270');
+assert(p1State.active.attachedTool, 'getState 應包含 attachedTool');
+console.log('✓ 成功將「勇氣護符」貼附在基礎寶可夢「密勒頓ex」身上，最大 HP 成功提升至 270！');
+
+// 測試 PTCG 規則：每隻寶可夢限貼 1 張道具卡，重複貼附應被阻擋
+const attachRes2 = toolGame.attachTool(0, 'bc_2', 'active');
+assert(!attachRes2.success, '身上已有道具卡時不應允許再次貼附道具');
+console.log('✓ 成功攔截重複貼附道具卡：', attachRes2.message);
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

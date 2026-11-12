@@ -2363,6 +2363,33 @@ function findCardByName(rawName) {
       return { success: true };
     }
 
+    attachTool(pIdx, cardId, targetSlot) {
+      const p = this.players[pIdx];
+      const idx = p.hand.findIndex(c => c.instanceId === cardId);
+      if (idx === -1) return { success: false, message: '找不到卡牌' };
+      const toolCard = p.hand[idx];
+      const isTool = (toolCard.subtypes && toolCard.subtypes.includes('Tool')) ||
+                     toolCard.supertype === 'tool' ||
+                     (toolCard.name && (toolCard.name.includes('護符') || toolCard.name.includes('鈴鐺響') || toolCard.name.includes('演進') || toolCard.name.includes('道具')));
+      if (!isTool) return { success: false, message: '該卡牌不是寶可夢道具卡！' };
+
+      const target = targetSlot === 'active' ? p.active : p.bench[targetSlot];
+      if (!target) return { success: false, message: '找不到目標寶可夢' };
+      if (target.attachedTool) return { success: false, message: `「${target.name}」身上已經貼有道具卡「${target.attachedTool.name}」，每隻寶可夢限貼 1 張道具！` };
+
+      p.hand.splice(idx, 1);
+      target.attachedTool = toolCard;
+
+      const isBasic = (target.subtypes && target.subtypes.includes('Basic')) || target.stage === 'Basic' || !target.stage;
+      if ((toolCard.id === 'bravery_charm' || (toolCard.name && toolCard.name.includes('勇氣護符'))) && isBasic) {
+        target.maxHpBonus = (target.maxHpBonus || 0) + 50;
+        this.log(`🛡️「勇氣護符」生效！基礎寶可夢「${target.name}」的最大 HP 提升 50！`);
+      }
+
+      this.log(`${p.name} 為「${target.name}」貼上了寶可夢道具「${toolCard.name}」。`);
+      return { success: true };
+    }
+
     evolve(pIdx, cardId, targetSlot) {
       const p = this.players[pIdx];
       if (this.turnNumber <= 2) return { success: false, message: '前兩回合不可進化' };
@@ -2372,10 +2399,16 @@ function findCardByName(rawName) {
       const target = targetSlot === 'active' ? p.active : p.bench[targetSlot];
       if (!target) return { success: false, message: '找不到目標' };
       const prevName = target.name;
+      const isBasic = (evoCard.subtypes && evoCard.subtypes.includes('Basic')) || evoCard.stage === 'Basic';
+      let maxHpBonus = 0;
+      if (target.attachedTool && (target.attachedTool.id === 'bravery_charm' || target.attachedTool.name.includes('勇氣護符')) && isBasic) {
+        maxHpBonus = 50;
+      }
       const evolved = {
         ...evoCard,
         attachedEnergy: target.attachedEnergy || [],
         attachedTool: target.attachedTool || null,
+        maxHpBonus: maxHpBonus,
         damage: target.damage || 0,
         turnPlayed: this.turnNumber
       };
@@ -2563,14 +2596,17 @@ function findCardByName(rawName) {
           this.log(`🛡️【抵抗力防禦】對手抵抗力減免 30 點傷害，剩餘 ${dmg} 點！`);
         }
 
+        const oppMaxHp = opp.active.hp + (opp.active.maxHpBonus || 0);
         opp.active.damage = (opp.active.damage || 0) + dmg;
-        const curHp = Math.max(0, opp.active.hp - opp.active.damage);
-        this.log(`💥 對「${opp.active.name}」造成 ${dmg} 點傷害！（剩餘 HP: ${curHp} / ${opp.active.hp}）`);
+        const curHp = Math.max(0, oppMaxHp - opp.active.damage);
+        this.log(`💥 對「${opp.active.name}」造成 ${dmg} 點傷害！（剩餘 HP: ${curHp} / ${oppMaxHp}）`);
 
         if (curHp <= 0) {
           this.log(`💀【昏厥！】對手的「${opp.active.name}」倒下了！`);
           const knockedOut = opp.active;
-          opp.discard.push(knockedOut, ...(knockedOut.attachedEnergy || []));
+          const toDiscard = [knockedOut, ...(knockedOut.attachedEnergy || [])];
+          if (knockedOut.attachedTool) toDiscard.push(knockedOut.attachedTool);
+          opp.discard.push(...toDiscard);
           opp.active = null;
           const prizesToTake = knockedOut.isEx ? 2 : 1;
           const taken = p.prizes.splice(0, prizesToTake);
@@ -2613,6 +2649,12 @@ function findCardByName(rawName) {
       if (!ai.turnFlags.energyAttached) {
         const e = ai.hand.find(c => c.supertype === 'energy');
         if (e && ai.active) this.attachEnergy(1, e.instanceId, 'active');
+      }
+
+      // 附加道具卡
+      const toolInHand = ai.hand.find(c => (c.subtypes && c.subtypes.includes('Tool')) || (c.name && c.name.includes('護符')));
+      if (toolInHand && ai.active && !ai.active.attachedTool) {
+        this.attachTool(1, toolInHand.instanceId, 'active');
       }
 
       // 3. 攻擊或結束回合（第一回合先攻依規則不可使出招式，直接結束回合換玩家回合）
@@ -2663,14 +2705,18 @@ function findCardByName(rawName) {
           active: p.active ? {
             ...p.active,
             attachedEnergy: p.active.attachedEnergy || [],
-            currentHp: Math.max(0, p.active.hp - (p.active.damage || 0)),
-            maxHp: p.active.hp
+            attachedTool: p.active.attachedTool || null,
+            maxHpBonus: p.active.maxHpBonus || 0,
+            currentHp: Math.max(0, (p.active.hp + (p.active.maxHpBonus || 0)) - (p.active.damage || 0)),
+            maxHp: p.active.hp + (p.active.maxHpBonus || 0)
           } : null,
           bench: p.bench.map(b => ({
             ...b,
             attachedEnergy: b.attachedEnergy || [],
-            currentHp: Math.max(0, b.hp - (b.damage || 0)),
-            maxHp: b.hp
+            attachedTool: b.attachedTool || null,
+            maxHpBonus: b.maxHpBonus || 0,
+            currentHp: Math.max(0, (b.hp + (b.maxHpBonus || 0)) - (b.damage || 0)),
+            maxHp: b.hp + (b.maxHpBonus || 0)
           })),
           hand: idx === viewerIndex ? p.hand : p.hand.map(() => ({ hidden: true })),
           handCount: p.hand.length,
@@ -2860,6 +2906,7 @@ function findCardByName(rawName) {
       let res = { success: false, message: '未知操作' };
       if (body.action === 'bench') res = g.playBasic(pIdx, body.cardInstanceId);
       else if (body.action === 'attach_energy') res = g.attachEnergy(pIdx, body.cardInstanceId, body.targetSlot);
+      else if (body.action === 'attach_tool') res = g.attachTool(pIdx, body.cardInstanceId, body.targetSlot);
       else if (body.action === 'evolve') res = g.evolve(pIdx, body.cardInstanceId, body.targetSlot);
       else if (body.action === 'play_item') res = g.playItem(pIdx, body.cardInstanceId, body.params || body);
       else if (body.action === 'play_supporter') res = g.playSupporter(pIdx, body.cardInstanceId);
