@@ -1200,24 +1200,28 @@ const CARD_USAGE_GUIDES = {
  */
 function getCardUsageGuide(card) {
   if (!card) return null;
-  const name = String(card.name || '').trim();
+  const cardObj = typeof card === 'string' ? { name: card } : card;
+  const name = String(cardObj.name || '').trim();
+  if (!name) return null;
 
   // 1. 精確卡名查詢
   if (CARD_USAGE_GUIDES[name]) {
     return CARD_USAGE_GUIDES[name];
   }
 
-  // 2. 模糊卡名查詢
-  for (const [k, guide] of Object.entries(CARD_USAGE_GUIDES)) {
-    if (name.includes(k) || k.includes(name)) {
-      return guide;
+  // 2. 模糊卡名查詢 (僅在 name 非空時比對)
+  if (name.length >= 2) {
+    for (const [k, guide] of Object.entries(CARD_USAGE_GUIDES)) {
+      if (name.includes(k) || k.includes(name)) {
+        return guide;
+      }
     }
   }
 
   // 3. 智慧規則生成器 (Fallback Generator for custom cards or newly synthesized cards)
-  const isAceSpec = card.isAceSpec || (card.subtypes && card.subtypes.includes('ACE SPEC'));
-  const supertype = card.supertype || 'pokemon';
-  const subtypes = card.subtypes || [];
+  const isAceSpec = cardObj.isAceSpec || (cardObj.subtypes && cardObj.subtypes.includes('ACE SPEC'));
+  const supertype = cardObj.supertype || 'pokemon';
+  const subtypes = cardObj.subtypes || [];
 
   if (supertype === 'energy') {
     return {
@@ -1225,7 +1229,7 @@ function getCardUsageGuide(card) {
       categoryClass: 'guide-badge-energy',
       timingBadge: '每回合手動貼1張',
       timingClass: 'guide-badge-timing',
-      effectText: (card.text && !card.text.includes('效果。')) ? card.text : `為場上的寶可夢附加 1 點 ${name}，提供使出招式或支付撤退費用所需點數。`,
+      effectText: (cardObj.text && !cardObj.text.includes('效果。')) ? cardObj.text : `為場上的寶可夢附加 1 點 ${name}，提供使出招式或支付撤退費用所需點數。`,
       timingText: '【主要階段】在自己的回合，每回合只能從手牌手動將 1 張能量卡附加到戰鬥場或備戰區的 1 隻寶可夢身上。',
       tacticsTip: '穩定分配能量至當前戰鬥打手或後排備用主力，防止主打手氣絕後攻擊斷檔。'
     };
@@ -1238,7 +1242,7 @@ function getCardUsageGuide(card) {
         categoryClass: 'guide-badge-acespec',
         timingBadge: '牌組限放1張 · 扭轉戰局',
         timingClass: 'guide-badge-acespec',
-        effectText: (card.text && !card.text.includes('效果。')) ? card.text : '發動超強王牌效果，直接扭轉戰場局勢。',
+        effectText: (cardObj.text && !cardObj.text.includes('效果。')) ? cardObj.text : '發動超強王牌效果，直接扭轉戰場局勢。',
         timingText: '【主要階段】在自己的回合使用。全牌組僅限放入 1 張 ACE SPEC 卡片，使用後進入棄牌區。',
         tacticsTip: '看準戰局關鍵決勝點發動，能一舉打亂對手節奏並鎖定對局勝利！'
       };
@@ -1249,7 +1253,7 @@ function getCardUsageGuide(card) {
         categoryClass: 'guide-badge-supporter',
         timingBadge: '每回合限用1張 · 先攻首回不可',
         timingClass: 'guide-badge-timing',
-        effectText: (card.text && !card.text.includes('效果。')) ? card.text : '發動支援者效果，提供強力手牌濾牌、調度或對手干擾。',
+        effectText: (cardObj.text && !cardObj.text.includes('效果。')) ? cardObj.text : '發動支援者效果，提供強力手牌濾牌、調度或對手干擾。',
         timingText: '【每回合限用 1 張】在自己的主要階段使用。先攻玩家的第 1 回合不可使用支援者卡。使用後進入棄牌區。',
         tacticsTip: '支援者卡通常擁有極大的戰略影響力，請根據手牌與場面情況把握最佳使用時機。'
       };
@@ -1260,7 +1264,7 @@ function getCardUsageGuide(card) {
         categoryClass: 'guide-badge-tool',
         timingBadge: '每隻寶可夢限攜帶1張',
         timingClass: 'guide-badge-timing',
-        effectText: (card.text && !card.text.includes('效果。')) ? card.text : '為攜帶此道具的寶可夢提供持續性的能力增益或防禦提升。',
+        effectText: (cardObj.text && !cardObj.text.includes('效果。')) ? cardObj.text : '為攜帶此道具的寶可夢提供持續性的能力增益或防禦提升。',
         timingText: '【主要階段】附加在自己場上的寶可夢身上。每隻寶可夢同一時間只能攜帶 1 張道具，裝備後不可任意拆卸或更換。',
         tacticsTip: '道具卡能在關鍵時刻提升寶可夢血量上限或降低撤退成本，提升站場與生存能力。'
       };
@@ -1271,7 +1275,7 @@ function getCardUsageGuide(card) {
       categoryClass: 'guide-badge-item',
       timingBadge: '主要階段 · 不限次數',
       timingClass: 'guide-badge-timing',
-      effectText: (card.text && !card.text.includes('效果。')) ? card.text : '在自己的回合發動物品輔助效果，使用後送入棄牌區。',
+      effectText: (cardObj.text && !cardObj.text.includes('效果。')) ? cardObj.text : '在自己的回合發動物品輔助效果，使用後送入棄牌區。',
       timingText: '【主要階段】在自己的回合中可以使用任意數量的物品卡。',
       tacticsTip: '靈活運用物品卡進行牌庫檢索、換位或資源調度，不消耗每回合唯一的支援者與能量次數。'
     };
@@ -1284,7 +1288,7 @@ function getCardUsageGuide(card) {
       categoryClass: 'guide-badge-pokemon',
       timingBadge: '需由1階進化或神奇糖果',
       timingClass: 'guide-badge-timing',
-      effectText: `HP ${card.hp || 300}。可重疊在「${card.evolvesFrom || '1階寶可夢'}」身上進化，或使用「神奇糖果」從基礎直接進化。${subtypes.includes('ex') ? '【ex規則】昏厥時對手拿取 2 張獎賞卡。' : ''}`,
+      effectText: `HP ${cardObj.hp || 300}。可重疊在「${cardObj.evolvesFrom || '1階寶可夢'}」身上進化，或使用「神奇糖果」從基礎直接進化。${subtypes.includes('ex') ? '【ex規則】昏厥時對手拿取 2 張獎賞卡。' : ''}`,
       timingText: '不可在基礎寶可夢剛放下的第 1 回合進化，亦不可在先攻玩家第 1 回合進化。',
       tacticsTip: '隊伍終極核心主力！具備極高 HP 與終結級招式傷害，配合特性快速成型能迅速主宰戰局。'
     };
@@ -1295,7 +1299,7 @@ function getCardUsageGuide(card) {
       categoryClass: 'guide-badge-pokemon',
       timingBadge: '需由基礎寶可夢進化',
       timingClass: 'guide-badge-timing',
-      effectText: `HP ${card.hp || 100}。重疊在「${card.evolvesFrom || '基礎寶可夢'}」身上進化。${subtypes.includes('ex') ? '【ex規則】昏厥時對手拿取 2 張獎賞卡。' : ''}`,
+      effectText: `HP ${cardObj.hp || 100}。重疊在「${cardObj.evolvesFrom || '基礎寶可夢'}」身上進化。${subtypes.includes('ex') ? '【ex規則】昏厥時對手拿取 2 張獎賞卡。' : ''}`,
       timingText: '不可在基礎寶可夢剛放下的第 1 回合進化，亦不可在先攻第 1 回合進化。',
       tacticsTip: '進化的過渡中樞，很多 1 階寶可夢擁有強力濾牌特性（如奇魯莉安、多龍奇），是維持資源循環的基石。'
     };
@@ -1307,7 +1311,7 @@ function getCardUsageGuide(card) {
     categoryClass: 'guide-badge-pokemon',
     timingBadge: '直接置於備戰區 (上限5隻)',
     timingClass: 'guide-badge-timing',
-    effectText: `HP ${card.hp || 70}。起手直接放置於戰鬥場或備戰區，或在主要階段從手牌放置至備戰區。${subtypes.includes('ex') ? '【ex規則】昏厥時對手拿取 2 張獎賞卡。' : ''}`,
+    effectText: `HP ${cardObj.hp || 70}。起手直接放置於戰鬥場或備戰區，或在主要階段從手牌放置至備戰區。${subtypes.includes('ex') ? '【ex規則】昏厥時對手拿取 2 張獎賞卡。' : ''}`,
     timingText: '【主要階段】在自己的回合，備戰區未滿 5 隻時可隨時從手牌放置上場。',
     tacticsTip: '開局盡速鋪滿備戰區，展開基礎戰力與進化鏈，確保隨時有主力能替換上場。'
   };

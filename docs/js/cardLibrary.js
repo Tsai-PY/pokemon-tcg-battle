@@ -77,7 +77,7 @@ function getAllLibraryCards() {
   return Array.from(cardsMap.values()).map(card => {
     const imageUrl = window.getCardImageUrl ? window.getCardImageUrl(card.name) : null;
     const artEmoji = window.getCardArtEmoji ? window.getCardArtEmoji(card.name) : '🎴';
-    const guide = window.getCardUsageGuide ? window.getCardUsageGuide(card.name) : null;
+    const guide = window.getCardUsageGuide ? window.getCardUsageGuide(card) : null;
 
     return {
       ...card,
@@ -436,7 +436,9 @@ async function handleLibraryCardPhotoUpload(event) {
  * 點選卡片開啟「卡片出牌教學與招式詳情」彈窗
  */
 function showCardDetailGuideModal(cardName) {
-  const guide = window.getCardUsageGuide ? window.getCardUsageGuide(cardName) : null;
+  const allCards = typeof collectAllLibraryCards === 'function' ? collectAllLibraryCards() : [];
+  const foundCard = allCards.find(c => c.name === cardName);
+  const guide = (foundCard && foundCard.guide) ? foundCard.guide : (window.getCardUsageGuide ? window.getCardUsageGuide(foundCard || cardName) : null);
   const imageUrl = window.getCardImageUrl ? window.getCardImageUrl(cardName) : null;
   const artEmoji = window.getCardArtEmoji ? window.getCardArtEmoji(cardName) : '🎴';
 
