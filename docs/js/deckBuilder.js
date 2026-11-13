@@ -249,8 +249,20 @@ function editDeckInSlot(slot) {
   }
 }
 
+function getCategoryChineseName(cat) {
+  switch (cat) {
+    case 'pokemon': return '寶可夢';
+    case 'supporter': return '支援者';
+    case 'item': return '物品';
+    case 'tool': return '道具';
+    case 'stadium': return '競技場';
+    case 'energy': return '能量';
+    default: return '卡牌';
+  }
+}
+
 function viewDeckDetails(slot) {
-  const deck = currentSharedDecks.find(d => d.slot === slot);
+  const deck = currentSharedDecks.find(d => Number(d.slot) === Number(slot));
   if (!deck) return;
   const modal = document.getElementById('deck-detail-modal');
   const title = document.getElementById('deck-detail-title');

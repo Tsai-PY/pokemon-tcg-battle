@@ -103,9 +103,12 @@ console.log(`✓ 進入第 2 回合 (輪到 ${game.players[game.activePlayerInde
 
 // Player attacks
 const currentP = game.players[game.activePlayerIndex];
-// Attach energy to active
-const fireEnergy = { name: '基本火能量', supertype: 'energy', energyType: 'Fire' };
-currentP.active.attachedEnergy.push(fireEnergy, fireEnergy, fireEnergy);
+// Attach energy matching the active Pokémon's first attack
+const requiredCosts = (currentP.active.attacks && currentP.active.attacks[0] && currentP.active.attacks[0].cost) || ['Fire'];
+requiredCosts.forEach(t => {
+  const eType = t === 'Colorless' ? 'Fire' : t;
+  currentP.active.attachedEnergy.push({ name: `基本${eType}能量`, supertype: 'energy', energyType: eType });
+});
 
 const attackRes = game.attack(game.activePlayerIndex, 0);
 assert(attackRes.success, '第2回合應可使出攻擊');
@@ -228,6 +231,19 @@ console.log('✓ 成功將「勇氣護符」貼附在基礎寶可夢「密勒頓
 const attachRes2 = toolGame.attachTool(0, 'bc_2', 'active');
 assert(!attachRes2.success, '身上已有道具卡時不應允許再次貼附道具');
 console.log('✓ 成功攔截重複貼附道具卡：', attachRes2.message);
+
+console.log('\n--- 7. 測試「使出招式」後不可繼續攻擊的回合限制 ---');
+toolGame.turnNumber = 2;
+toolGame.activePlayerIndex = 0;
+toolPlayer.turnFlags.attacked = false;
+toolPlayer.active.attacks = [{ name: '閃電連擊', cost: ['Lightning'], damage: 20 }];
+toolPlayer.active.attachedEnergy = [{ instanceId: 'e_l1', name: '基本雷能量', supertype: 'energy', energyType: 'Lightning' }];
+const atkRes1 = toolGame.attack(0, 0);
+assert(atkRes1.success, '第一次使出招式應成功');
+assert.strictEqual(toolGame.activePlayerIndex, 1, '使出招式後應自動切換至對手回合');
+const atkRes2 = toolGame.attack(0, 0);
+assert(!atkRes2.success, '使出招式後不可再次使出招式');
+console.log('✓ 成功攔截連續使出招式：', atkRes2.message);
 
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');

@@ -290,17 +290,20 @@ function renderGameState(state) {
   }
 
   const retreatBtn = document.getElementById('btn-action-retreat');
+  const isFinished = state.status === 'finished';
+  const hasAttacked = !!(player.turnFlags && player.turnFlags.attacked);
 
   if (endTurnBtn) {
-    endTurnBtn.disabled = !isMyTurn;
-    endTurnBtn.style.opacity = isMyTurn ? '1' : '0.5';
+    endTurnBtn.disabled = !isMyTurn || isFinished;
+    endTurnBtn.style.opacity = (isMyTurn && !isFinished) ? '1' : '0.5';
   }
   if (attackBtn) {
-    attackBtn.disabled = !isMyTurn || state.turnNumber === 1;
-    attackBtn.style.opacity = (!isMyTurn || state.turnNumber === 1) ? '0.5' : '1';
+    const canAttack = isMyTurn && !isFinished && state.turnNumber > 1 && !hasAttacked && !!player.active;
+    attackBtn.disabled = !canAttack;
+    attackBtn.style.opacity = canAttack ? '1' : '0.5';
   }
   if (retreatBtn) {
-    const canRetreat = isMyTurn && player.bench && player.bench.length > 0 && !(player.turnFlags && player.turnFlags.retreatedThisTurn);
+    const canRetreat = isMyTurn && !isFinished && !hasAttacked && player.bench && player.bench.length > 0 && !(player.turnFlags && (player.turnFlags.retreated || player.turnFlags.retreatedThisTurn));
     retreatBtn.disabled = !canRetreat;
     retreatBtn.style.opacity = canRetreat ? '1' : '0.5';
   }
@@ -529,12 +532,12 @@ function inspectCard(card, location, slotIndex = null) {
         actionsHtml += `<div class="form-hint" style="color: #f87171;">⚠️ 先攻第一回合不可使用支援者卡</div>`;
       }
     }
-  } else if (location === 'self_active' && isMyTurn) {
+  } else if (location === 'self_active' && isMyTurn && currentGameState.status !== 'finished') {
     // Active actions: Attacks & Retreat
-    if (currentGameState.turnNumber > 1) {
+    if (currentGameState.turnNumber > 1 && !(player.turnFlags && player.turnFlags.attacked)) {
       actionsHtml += `<button class="btn btn-accent" onclick="openAttackChoiceModal()">⚔️ 選擇招式進行攻擊</button>`;
     }
-    if (!player.turnFlags.retreated && player.bench.length > 0) {
+    if (!player.turnFlags.retreated && !(player.turnFlags && player.turnFlags.attacked) && player.bench.length > 0) {
       actionsHtml += `<button class="btn btn-secondary" onclick="openRetreatChoiceModal()">🏃 撤退至備戰區</button>`;
     }
   }
@@ -1030,7 +1033,20 @@ function doPlaySupporter(cardInstanceId) {
 // Attacks Modal
 function openAttackChoiceModal() {
   closeCardActionModal();
+  if (!currentGameState || currentGameState.status === 'finished') return;
+  if (currentGameState.activePlayerIndex !== currentPlayerIndex) {
+    alert('目前非您的回合，請等待對手行動！');
+    return;
+  }
+  if (currentGameState.turnNumber === 1) {
+    alert('規則限制：先攻第一回合不能使出招式！');
+    return;
+  }
   const player = currentGameState.players[currentPlayerIndex];
+  if (player.turnFlags && player.turnFlags.attacked) {
+    alert('每回合只能使出 1 次招式，使出招式後回合即結束！');
+    return;
+  }
   if (!player.active) return;
 
   const attacks = player.active.attacks || [];
@@ -1065,6 +1081,12 @@ function openAttackChoiceModal() {
         <span style="font-weight: 800; color: #dc2626; font-size: 1.1rem;">${at.damage || 0} 點傷害</span>
       `;
       btn.onclick = () => {
+        btn.disabled = true;
+        const attackBtn = document.getElementById('btn-action-attack');
+        if (attackBtn) {
+          attackBtn.disabled = true;
+          attackBtn.style.opacity = '0.5';
+        }
         modal.classList.remove('active');
         sfx.playAttack();
         sendGameAction('attack', { attackIndex: idx });

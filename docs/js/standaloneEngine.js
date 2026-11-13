@@ -2228,7 +2228,7 @@ function findCardByName(rawName) {
         bench: [],
         prizes: [],
         discard: [],
-        turnFlags: { energyAttached: false, supporterPlayed: false, retreated: false }
+        turnFlags: { energyAttached: false, supporterPlayed: false, retreated: false, attacked: false }
       };
     }
 
@@ -2311,7 +2311,7 @@ function findCardByName(rawName) {
       this.turnNumber++;
       this.activePlayerIndex = 1 - this.activePlayerIndex;
       const cur = this.players[this.activePlayerIndex];
-      cur.turnFlags = { energyAttached: false, supporterPlayed: false, retreated: false };
+      cur.turnFlags = { energyAttached: false, supporterPlayed: false, retreated: false, attacked: false };
 
       this.log(`----------------------------------------`);
       this.log(`【第 ${this.turnNumber} 回合】輪到 ${cur.name}！`);
@@ -2337,6 +2337,8 @@ function findCardByName(rawName) {
     }
 
     playBasic(pIdx, cardId) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       if (p.bench.length >= 5) return { success: false, message: '備戰區已滿' };
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
@@ -2349,6 +2351,8 @@ function findCardByName(rawName) {
     }
 
     attachEnergy(pIdx, cardId, targetSlot) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       if (p.turnFlags.energyAttached) return { success: false, message: '每回合限附加 1 張能量' };
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
@@ -2364,6 +2368,8 @@ function findCardByName(rawName) {
     }
 
     attachTool(pIdx, cardId, targetSlot) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
       if (idx === -1) return { success: false, message: '找不到卡牌' };
@@ -2391,6 +2397,8 @@ function findCardByName(rawName) {
     }
 
     evolve(pIdx, cardId, targetSlot) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       if (this.turnNumber <= 2) return { success: false, message: '前兩回合不可進化' };
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
@@ -2419,6 +2427,8 @@ function findCardByName(rawName) {
     }
 
     playItem(pIdx, cardId, params = {}) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       const opp = this.players[1 - pIdx];
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
@@ -2520,6 +2530,8 @@ function findCardByName(rawName) {
     }
 
     playSupporter(pIdx, cardId) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       if (this.turnNumber === 1) return { success: false, message: '先攻首回合不可使用支援者卡' };
       if (p.turnFlags.supporterPlayed) return { success: false, message: '每回合限用 1 張支援者卡' };
@@ -2542,6 +2554,8 @@ function findCardByName(rawName) {
     }
 
     retreat(pIdx, benchIdx) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       if (p.turnFlags.retreated) return { success: false, message: '每回合限撤退 1 次' };
       if (!p.active || !p.bench[benchIdx]) return { success: false, message: '找不到寶可夢' };
@@ -2557,8 +2571,11 @@ function findCardByName(rawName) {
     }
 
     attack(pIdx, attackIdx = 0) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
       const opp = this.players[1 - pIdx];
+      if (p.turnFlags && p.turnFlags.attacked) return { success: false, message: '每回合只能使出 1 次招式，使出招式後回合即結束！' };
       if (this.turnNumber === 1) return { success: false, message: '先攻首回合不可攻擊' };
       if (!p.active) return { success: false, message: '無戰鬥寶可夢' };
 
@@ -2572,6 +2589,7 @@ function findCardByName(rawName) {
           message: `招式「${at.name}」能量未達啟動條件！（需要：${costZh}，缺少：${missZh}）`
         };
       }
+      if (p.turnFlags) p.turnFlags.attacked = true;
       this.log(`⚔️【攻擊】${p.name} 的「${p.active.name}」使出【${at.name}】！`);
 
       let dmg = typeof at.damage === 'number' ? at.damage : 30;
