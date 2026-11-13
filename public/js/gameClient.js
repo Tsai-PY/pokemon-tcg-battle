@@ -182,40 +182,59 @@ function executeP2PAction(g, pIdx, actionType, payload) {
   return res;
 }
 
+let isAttackActionInFlight = false;
+
 // Send Action to Engine (P2P WebRTC, WS, or REST)
 async function sendGameAction(actionType, payload = {}) {
-  // 1. P2P WebRTC Mode (Cross-Device Internet play)
-  if (p2pConnection && p2pConnection.open) {
-    if (isP2PHost && p2pGame) {
-      executeP2PAction(p2pGame, 0, actionType, payload);
-      const hostState = p2pGame.getState(0);
-      const guestState = p2pGame.getState(1);
-      p2pConnection.send({ type: 'state', state: guestState });
-      currentGameState = hostState;
-      renderGameState(hostState);
-    } else {
-      p2pConnection.send({
-        type: 'action',
-        actionType,
-        payload
-      });
+  if (actionType === 'attack') {
+    if (isAttackActionInFlight) return;
+    if (currentGameState && (currentGameState.status === 'finished' || currentGameState.activePlayerIndex !== currentPlayerIndex)) {
+      return;
     }
-    return;
+    const curP = currentGameState && currentGameState.players && currentGameState.players[currentPlayerIndex];
+    if (curP && curP.turnFlags && curP.turnFlags.attacked) {
+      alert('每回合只能使出 1 次招式，使出招式後回合即結束！');
+      return;
+    }
+    isAttackActionInFlight = true;
   }
 
-  // 2. WebSocket Mode
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-      type: actionType,
-      gameId: currentGameId,
-      playerIndex: currentPlayerIndex,
-      payload
-    }));
-    return;
-  }
-
-  // 3. Fallback to REST
   try {
+    // 1. P2P WebRTC Mode (Cross-Device Internet play)
+    if (p2pConnection && p2pConnection.open) {
+      if (isP2PHost && p2pGame) {
+        const actionRes = executeP2PAction(p2pGame, 0, actionType, payload);
+        if (actionRes && !actionRes.success) {
+          alert('操作提示：' + actionRes.message);
+          return;
+        }
+        const hostState = p2pGame.getState(0);
+        const guestState = p2pGame.getState(1);
+        p2pConnection.send({ type: 'state', state: guestState });
+        currentGameState = hostState;
+        renderGameState(hostState);
+      } else {
+        p2pConnection.send({
+          type: 'action',
+          actionType,
+          payload
+        });
+      }
+      return;
+    }
+
+    // 2. WebSocket Mode
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: actionType,
+        gameId: currentGameId,
+        playerIndex: currentPlayerIndex,
+        payload
+      }));
+      return;
+    }
+
+    // 3. Fallback to REST
     const res = await fetch(`/api/games/${currentGameId}/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -235,6 +254,10 @@ async function sendGameAction(actionType, payload = {}) {
     }
   } catch (err) {
     console.error('sendGameAction REST fallback error:', err);
+  } finally {
+    if (actionType === 'attack') {
+      isAttackActionInFlight = false;
+    }
   }
 }
 
