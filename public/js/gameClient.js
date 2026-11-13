@@ -183,6 +183,7 @@ function executeP2PAction(g, pIdx, actionType, payload) {
 }
 
 let isAttackActionInFlight = false;
+let isRetreatSelectionMode = false;
 
 // Send Action to Engine (P2P WebRTC, WS, or REST)
 async function sendGameAction(actionType, payload = {}) {
@@ -315,6 +316,7 @@ function renderGameState(state) {
   const retreatBtn = document.getElementById('btn-action-retreat');
   const isFinished = state.status === 'finished';
   const hasAttacked = !!(player.turnFlags && player.turnFlags.attacked);
+  isRetreatSelectionMode = false;
 
   if (endTurnBtn) {
     endTurnBtn.disabled = !isMyTurn || isFinished;
@@ -329,6 +331,9 @@ function renderGameState(state) {
     const canRetreat = isMyTurn && !isFinished && !hasAttacked && player.bench && player.bench.length > 0 && !(player.turnFlags && (player.turnFlags.retreated || player.turnFlags.retreatedThisTurn));
     retreatBtn.disabled = !canRetreat;
     retreatBtn.style.opacity = canRetreat ? '1' : '0.5';
+    retreatBtn.textContent = '🏃 撤退寶可夢';
+    retreatBtn.classList.remove('btn-danger');
+    retreatBtn.classList.add('btn-secondary');
   }
 
   // 1. OPPONENT FIELD (TOP)
@@ -403,9 +408,16 @@ function renderGameState(state) {
     const slots = playerBenchRow.querySelectorAll('.bench-card-slot');
     slots.forEach((slotEl, idx) => {
       const bPokemon = player.bench[idx];
+      slotEl.classList.remove('retreat-target-highlight');
       slotEl.innerHTML = bPokemon ? renderCardHtml(bPokemon) : `<span class="mat-slot-label">備戰區</span>`;
       if (bPokemon) {
-        slotEl.onclick = () => inspectCard(bPokemon, 'self_bench', idx);
+        slotEl.onclick = () => {
+          if (isRetreatSelectionMode) {
+            confirmDirectRetreat(idx);
+          } else {
+            inspectCard(bPokemon, 'self_bench', idx);
+          }
+        };
       } else {
         slotEl.onclick = null;
       }
@@ -1159,34 +1171,85 @@ function openAttackChoiceModal() {
   modal.classList.add('active');
 }
 
-// Retreat Modal
+// Direct Mouse Retreat Selection (點擊備戰區寶可夢直接撤退替換)
 function openRetreatChoiceModal() {
   closeCardActionModal();
+  if (isRetreatSelectionMode) {
+    cancelRetreatSelection();
+    return;
+  }
+  if (!currentGameState || currentGameState.status === 'finished') return;
+  if (currentGameState.activePlayerIndex !== currentPlayerIndex) {
+    alert('目前非您的回合，請等待對手行動！');
+    return;
+  }
+
   const player = currentGameState.players[currentPlayerIndex];
-  if (player.bench.length === 0) {
+  if (player.turnFlags && (player.turnFlags.retreated || player.turnFlags.retreatedThisTurn)) {
+    alert('每回合只能撤退 1 次！');
+    return;
+  }
+  if (!player.active) return;
+  if (!player.bench || player.bench.length === 0) {
     alert('備戰區沒有寶可夢可以替換！');
     return;
   }
 
-  const retreatCost = player.active.retreatCost || 0;
+  const retreatCost = typeof player.active.retreatCost === 'number' ? player.active.retreatCost : 1;
   const attachedCount = (player.active.attachedEnergy || []).length;
   if (attachedCount < retreatCost) {
     alert(`撤退需要 ${retreatCost} 個能量，目前只有 ${attachedCount} 個能量！`);
     return;
   }
 
-  let promptMsg = `請選擇要換上戰鬥場的備戰寶可夢編號（0 到 ${player.bench.length - 1}）：\n`;
-  player.bench.forEach((b, i) => {
-    promptMsg += `[${i}] ${b.name} (HP: ${b.currentHp}/${b.maxHp})\n`;
-  });
-
-  const choice = prompt(promptMsg, '0');
-  if (choice !== null) {
-    const benchIndex = parseInt(choice, 10);
-    if (!isNaN(benchIndex) && benchIndex >= 0 && benchIndex < player.bench.length) {
-      sendGameAction('retreat', { benchIndex });
-    }
+  isRetreatSelectionMode = true;
+  const playerBenchRow = document.getElementById('player-bench-row');
+  if (playerBenchRow) {
+    const slots = playerBenchRow.querySelectorAll('.bench-card-slot');
+    slots.forEach((slotEl, idx) => {
+      if (player.bench[idx]) {
+        slotEl.classList.add('retreat-target-highlight');
+      }
+    });
   }
+
+  const retreatBtn = document.getElementById('btn-action-retreat');
+  if (retreatBtn) {
+    retreatBtn.textContent = '❌ 取消撤退';
+    retreatBtn.classList.remove('btn-secondary');
+    retreatBtn.classList.add('btn-danger');
+  }
+
+  const activeLabel = document.getElementById('battle-current-player-label');
+  if (activeLabel) {
+    activeLabel.textContent = '🏃 請用滑鼠直接點選備戰區要換上戰鬥場的寶可夢！';
+    activeLabel.style.color = '#38bdf8';
+  }
+}
+
+function cancelRetreatSelection() {
+  isRetreatSelectionMode = false;
+  const playerBenchRow = document.getElementById('player-bench-row');
+  if (playerBenchRow) {
+    playerBenchRow.querySelectorAll('.bench-card-slot').forEach(slotEl => {
+      slotEl.classList.remove('retreat-target-highlight');
+    });
+  }
+  if (currentGameState) {
+    renderGameState(currentGameState);
+  }
+}
+
+function confirmDirectRetreat(benchIndex) {
+  isRetreatSelectionMode = false;
+  const playerBenchRow = document.getElementById('player-bench-row');
+  if (playerBenchRow) {
+    playerBenchRow.querySelectorAll('.bench-card-slot').forEach(slotEl => {
+      slotEl.classList.remove('retreat-target-highlight');
+    });
+  }
+  sfx.playCard();
+  sendGameAction('retreat', { benchIndex });
 }
 
 // Game Over Modal
