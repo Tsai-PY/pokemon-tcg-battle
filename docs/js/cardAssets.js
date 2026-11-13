@@ -158,7 +158,8 @@ const OFFICIAL_CARD_IMAGES = {
   '神奇糖果': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_191_R_EN_MD.png',
   '寶可夢交替': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_194_R_EN_MD.png',
   '大地之器': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAR/PAR_163_R_EN_MD.png',
-  '超級能量回收棒': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAL/PAL_188_R_EN_MD.png',
+  '超級能量回收棒': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAL/PAL_189_R_EN_MD.png',
+  '反擊捕獲器': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAR/PAR_160_R_EN_MD.png',
   '勇氣護符': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAL/PAL_173_R_EN_MD.png',
   '至尊捕捉器': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TEF/TEF_157_R_EN_MD.png',
   '傷藥': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_188_R_EN_MD.png',
@@ -169,6 +170,7 @@ const OFFICIAL_CARD_IMAGES = {
   '基本電能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_004_R_EN_MD.png',
   '基本超能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_005_R_EN_MD.png',
   '基本草能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_001_R_EN_MD.png',
+  '基本鬥能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_006_R_EN_MD.png',
   '基本惡能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_007_R_EN_MD.png',
   '基本鋼能量': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_008_R_EN_MD.png',
 

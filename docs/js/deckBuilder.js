@@ -1123,8 +1123,11 @@ function processCardPhotoAndAutoAdd(sourceNameOrUrl, photoDataUrl, canvasOrImg) 
   updatePhotoModalPreview();
 
   // 若對戰中，同時更新對戰盤面
-  if (typeof renderPlaymat === 'function' && window.currentGameState) {
-    renderPlaymat(window.currentGameState);
+  if (typeof window.renderGameState === 'function' && window.currentGameState) {
+    window.renderGameState(window.currentGameState);
+  }
+  if (typeof window.loadAllCardsLibrary === 'function') {
+    window.loadAllCardsLibrary();
   }
 
   // 5. 音效提示
@@ -1314,9 +1317,11 @@ function handleCardPhotoFileSelected(event) {
         previewImg.style.display = 'block';
       }
       if (placeholder) placeholder.style.display = 'none';
-
-      // 立即自動辨識並自動加入牌庫中！
-      processCardPhotoAndAutoAdd(file.name, currentPhotoPendingData, canvas);
+      const statusBadge = document.getElementById('photo-source-status');
+      if (statusBadge) {
+        statusBadge.className = 'status-badge status-approved';
+        statusBadge.textContent = '已選擇新照片（請按儲存套用）';
+      }
     };
     img.src = rawDataUrl;
   };
@@ -1341,12 +1346,16 @@ function applyCardPhotoFromUrl() {
     previewImg.style.display = 'block';
   }
   if (placeholder) placeholder.style.display = 'none';
-
-  // 立即自動辨識並自動加入牌庫中！
-  processCardPhotoAndAutoAdd(url, url, null);
+  const statusBadge = document.getElementById('photo-source-status');
+  if (statusBadge) {
+    statusBadge.className = 'status-badge status-approved';
+    statusBadge.textContent = '已載入網址圖片（請按儲存套用）';
+  }
 }
 
 function resetCardPhotoToDefault() {
+  const select = document.getElementById('photo-target-card-select');
+  if (select && select.value) currentPhotoCardName = select.value;
   if (!currentPhotoCardName) return;
   if (window.removeCustomCardImage) {
     window.removeCustomCardImage(currentPhotoCardName);
@@ -1354,21 +1363,43 @@ function resetCardPhotoToDefault() {
   currentPhotoPendingData = '';
   updatePhotoModalPreview();
   if (typeof renderEditingCardRows === 'function') renderEditingCardRows();
-  if (typeof renderPlaymat === 'function' && window.currentGameState) renderPlaymat(window.currentGameState);
+  if (typeof window.loadAllCardsLibrary === 'function') window.loadAllCardsLibrary();
+  if (typeof window.renderGameState === 'function' && window.currentGameState) window.renderGameState(window.currentGameState);
   alert(`已將【${currentPhotoCardName}】恢復為官方預設圖案！`);
 }
 
 function saveCardPhotoModal() {
+  const select = document.getElementById('photo-target-card-select');
+  if (select && select.value) {
+    currentPhotoCardName = select.value;
+  }
   if (!currentPhotoCardName) return;
-  if (currentPhotoPendingData) {
-    if (window.saveCustomCardImage) {
-      window.saveCustomCardImage(currentPhotoCardName, currentPhotoPendingData);
+
+  if (!currentPhotoPendingData) {
+    const urlInput = document.getElementById('card-photo-url-input');
+    if (urlInput && urlInput.value.trim()) {
+      currentPhotoPendingData = urlInput.value.trim();
     }
   }
+
+  if (currentPhotoPendingData) {
+    if (window.saveCustomCardImage) {
+      const saved = window.saveCustomCardImage(currentPhotoCardName, currentPhotoPendingData);
+      if (!saved) {
+        alert('儲存圖片失敗，可能是圖片檔案過大超過瀏覽器容量限制，請改用較小圖片或圖片網址。');
+        return;
+      }
+    }
+  } else {
+    alert('請先選擇要上傳的圖片檔案或貼上圖片網址！');
+    return;
+  }
+
   if (typeof renderEditingCardRows === 'function') renderEditingCardRows();
-  if (typeof renderPlaymat === 'function' && window.currentGameState) renderPlaymat(window.currentGameState);
+  if (typeof window.loadAllCardsLibrary === 'function') window.loadAllCardsLibrary();
+  if (typeof window.renderGameState === 'function' && window.currentGameState) window.renderGameState(window.currentGameState);
   closeCardPhotoModal();
-  alert(`已成功更新【${currentPhotoCardName}】的卡牌照片！已即時套用於牌組與對戰！`);
+  alert(`已成功更新【${currentPhotoCardName}】的卡牌照片！已即時套用於牌庫、牌組與對戰！`);
 }
 
 // Expose functions globally for onclick attributes
