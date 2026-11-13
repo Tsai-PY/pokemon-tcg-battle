@@ -2529,15 +2529,39 @@ function findCardByName(rawName) {
       return { success: true };
     }
 
-    playSupporter(pIdx, cardId) {
+    playSupporter(pIdx, cardId, params = {}) {
       if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
       if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
+      const opp = this.players[1 - pIdx];
       if (this.turnNumber === 1) return { success: false, message: '先攻首回合不可使用支援者卡' };
       if (p.turnFlags.supporterPlayed) return { success: false, message: '每回合限用 1 張支援者卡' };
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
       if (idx === -1) return { success: false, message: '找不到卡牌' };
-      const supp = p.hand.splice(idx, 1)[0];
+      const supp = p.hand[idx];
+
+      const isBossOrders = supp.id === 'boss_orders' || supp.effect === 'boss_orders_switch' || (supp.name && supp.name.includes('老大'));
+      if (isBossOrders) {
+        if (!opp.bench || opp.bench.length === 0) {
+          return { success: false, message: '對手備戰區沒有寶可夢可調換！' };
+        }
+        p.hand.splice(idx, 1);
+        p.discard.push(supp);
+        p.turnFlags.supporterPlayed = true;
+
+        const oppBenchIdx = (typeof params.oppBenchIndex === 'number' && opp.bench[params.oppBenchIndex]) ? params.oppBenchIndex : 0;
+        const oldOppActive = opp.active;
+        opp.active = opp.bench[oppBenchIdx];
+        if (oldOppActive) {
+          opp.bench[oppBenchIdx] = oldOppActive;
+        } else {
+          opp.bench.splice(oppBenchIdx, 1);
+        }
+        this.log(`📢「老大的指令」：${p.name} 強制將對手的備戰寶可夢「${opp.active.name}」與戰鬥場「${oldOppActive ? oldOppActive.name : '空位'}」互換！`);
+        return { success: true };
+      }
+
+      p.hand.splice(idx, 1);
       p.discard.push(supp);
       p.turnFlags.supporterPlayed = true;
 
@@ -2545,6 +2569,14 @@ function findCardByName(rawName) {
         p.discard.push(...p.hand);
         p.hand = p.deck.splice(0, Math.min(7, p.deck.length));
         this.log(`🔬「博士的研究」：${p.name} 丟棄手牌並重抽 7 張！`);
+      } else if (supp.id === 'iono' || supp.effect === 'iono_shuffle_hand' || (supp.name && supp.name.includes('奇樹'))) {
+        for (const pl of [p, opp]) {
+          pl.deck.push(...pl.hand);
+          pl.hand = [];
+          const drawCount = Math.min(pl.prizes.length, pl.deck.length);
+          pl.hand.push(...pl.deck.splice(0, drawCount));
+        }
+        this.log(`⚡「奇樹」：雙方將手牌放回牌庫下方，並依各自剩餘獎賞卡張數抽牌！`);
       } else {
         const draw = p.deck.splice(0, Math.min(3, p.deck.length));
         p.hand.push(...draw);
@@ -2927,7 +2959,7 @@ function findCardByName(rawName) {
       else if (body.action === 'attach_tool') res = g.attachTool(pIdx, body.cardInstanceId, body.targetSlot);
       else if (body.action === 'evolve') res = g.evolve(pIdx, body.cardInstanceId, body.targetSlot);
       else if (body.action === 'play_item') res = g.playItem(pIdx, body.cardInstanceId, body.params || body);
-      else if (body.action === 'play_supporter') res = g.playSupporter(pIdx, body.cardInstanceId);
+      else if (body.action === 'play_supporter') res = g.playSupporter(pIdx, body.cardInstanceId, body.params || body);
       else if (body.action === 'retreat') res = g.retreat(pIdx, body.benchIndex);
       else if (body.action === 'attack') res = g.attack(pIdx, body.attackIndex || 0);
       else if (body.action === 'end_turn') { g.nextTurn(); res = { success: true }; }

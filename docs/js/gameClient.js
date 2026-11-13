@@ -175,7 +175,7 @@ function executeP2PAction(g, pIdx, actionType, payload) {
   else if (actionType === 'attach_tool') res = g.attachTool(pIdx, payload.cardInstanceId, payload.targetSlot);
   else if (actionType === 'evolve') res = g.evolve(pIdx, payload.cardInstanceId, payload.targetSlot);
   else if (actionType === 'play_item') res = g.playItem(pIdx, payload.cardInstanceId, payload.params || payload);
-  else if (actionType === 'play_supporter') res = g.playSupporter(pIdx, payload.cardInstanceId);
+  else if (actionType === 'play_supporter') res = g.playSupporter(pIdx, payload.cardInstanceId, payload.params || payload);
   else if (actionType === 'retreat') res = g.retreat(pIdx, payload.benchIndex);
   else if (actionType === 'attack') res = g.attack(pIdx, payload.attackIndex || 0);
   else if (actionType === 'end_turn') { g.nextTurn(); res = { success: true }; }
@@ -550,7 +550,19 @@ function inspectCard(card, location, slotIndex = null) {
     // 6. Play Supporter Card (Max 1 per turn, not Turn 1)
     if (card.supertype === 'trainer' && card.subtypes && card.subtypes.includes('Supporter')) {
       if (!player.turnFlags.supporterPlayed && currentGameState.turnNumber > 1) {
-        actionsHtml += `<button class="btn btn-primary" onclick="doPlaySupporter('${card.instanceId}')">👤 使用此支援者卡</button>`;
+        const isBossOrders = card.id === 'boss_orders' || card.effect === 'boss_orders_switch' || (card.name && card.name.includes('老大'));
+        if (isBossOrders) {
+          const opponent = currentGameState.players[1 - currentPlayerIndex];
+          if (!opponent.bench || opponent.bench.length === 0) {
+            actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">📢 老大的指令（對手備戰區無寶可夢可調換）</button>`;
+          } else {
+            opponent.bench.forEach((b, bIdx) => {
+              actionsHtml += `<button class="btn btn-primary" onclick="doPlayBossOrders('${card.instanceId}', ${bIdx})">📢 強制將對手備戰區「${b.name}」換上戰鬥場</button>`;
+            });
+          }
+        } else {
+          actionsHtml += `<button class="btn btn-primary" onclick="doPlaySupporter('${card.instanceId}')">👤 使用此支援者卡</button>`;
+        }
       } else if (currentGameState.turnNumber === 1) {
         actionsHtml += `<div class="form-hint" style="color: #f87171;">⚠️ 先攻第一回合不可使用支援者卡</div>`;
       }
@@ -1051,6 +1063,12 @@ function doPlaySupporter(cardInstanceId) {
   closeCardActionModal();
   sfx.playCard();
   sendGameAction('play_supporter', { cardInstanceId });
+}
+
+function doPlayBossOrders(cardInstanceId, oppBenchIndex) {
+  closeCardActionModal();
+  sfx.playCard();
+  sendGameAction('play_supporter', { cardInstanceId, oppBenchIndex });
 }
 
 // Attacks Modal

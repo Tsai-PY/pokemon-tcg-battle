@@ -245,6 +245,26 @@ const atkRes2 = toolGame.attack(0, 0);
 assert(!atkRes2.success, '使出招式後不可再次使出招式');
 console.log('✓ 成功攔截連續使出招式：', atkRes2.message);
 
+console.log('\n--- 8. 測試支援者卡「老大的指令」強制調換對手戰鬥區與備戰區寶可夢 ---');
+toolGame.status = 'playing';
+toolGame.turnNumber = 2;
+toolGame.activePlayerIndex = 0;
+toolPlayer.turnFlags.supporterPlayed = false;
+const oppPlayer = toolGame.players[1];
+oppPlayer.active = { instanceId: 'opp_a', name: '古劍豹ex', supertype: 'pokemon', hp: 220, damage: 0 };
+oppPlayer.bench = [
+  { instanceId: 'opp_b0', name: '小火龍', supertype: 'pokemon', hp: 70, damage: 0 },
+  { instanceId: 'opp_b1', name: '波波', supertype: 'pokemon', hp: 60, damage: 0 }
+];
+toolPlayer.hand = [
+  { instanceId: 'boss_1', id: 'boss_orders', name: '老大的指令', supertype: 'trainer', subtypes: ['Supporter'], effect: 'boss_orders_switch' }
+];
+const bossRes = toolGame.playSupporter(0, 'boss_1', { oppBenchIndex: 1 });
+assert(bossRes.success, '老大的指令發動應成功');
+assert.strictEqual(oppPlayer.active.name, '波波', '對手戰鬥場應已更換為指定的備戰寶可夢「波波」');
+assert.strictEqual(oppPlayer.bench[1].name, '古劍豹ex', '原本的對手戰鬥寶可夢「古劍豹ex」應已移至備戰區槽位 1');
+console.log('✓ 成功發動「老大的指令」，將對手備戰區的「波波」與戰鬥區的「古劍豹ex」互換！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');
