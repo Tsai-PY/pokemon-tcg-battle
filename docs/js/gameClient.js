@@ -316,19 +316,33 @@ function renderGameState(state) {
   const retreatBtn = document.getElementById('btn-action-retreat');
   const isFinished = state.status === 'finished';
   const hasAttacked = !!(player.turnFlags && player.turnFlags.attacked);
+  const activeStatus = (player.active && Array.isArray(player.active.statusConditions)) ? player.active.statusConditions : [];
+  const isImmobilized = activeStatus.includes('paralyzed') || activeStatus.includes('asleep');
   isRetreatSelectionMode = false;
+
+  if (activeLabel && isMyTurn && activeStatus.length > 0) {
+    const statusLabels = {
+      poisoned: '☠️ 中毒',
+      burned: '🔥 灼傷',
+      paralyzed: '⚡ 麻痺',
+      asleep: '💤 睡眠',
+      confused: '💫 混亂'
+    };
+    const statusText = activeStatus.map(s => statusLabels[s] || s).join('、');
+    activeLabel.textContent += ` 【戰鬥場異常：${statusText}】`;
+  }
 
   if (endTurnBtn) {
     endTurnBtn.disabled = !isMyTurn || isFinished;
     endTurnBtn.style.opacity = (isMyTurn && !isFinished) ? '1' : '0.5';
   }
   if (attackBtn) {
-    const canAttack = isMyTurn && !isFinished && state.turnNumber > 1 && !hasAttacked && !!player.active;
+    const canAttack = isMyTurn && !isFinished && state.turnNumber > 1 && !hasAttacked && !!player.active && !isImmobilized;
     attackBtn.disabled = !canAttack;
     attackBtn.style.opacity = canAttack ? '1' : '0.5';
   }
   if (retreatBtn) {
-    const canRetreat = isMyTurn && !isFinished && !hasAttacked && player.bench && player.bench.length > 0 && !(player.turnFlags && (player.turnFlags.retreated || player.turnFlags.retreatedThisTurn));
+    const canRetreat = isMyTurn && !isFinished && !hasAttacked && player.bench && player.bench.length > 0 && !(player.turnFlags && (player.turnFlags.retreated || player.turnFlags.retreatedThisTurn)) && !isImmobilized;
     retreatBtn.disabled = !canRetreat;
     retreatBtn.style.opacity = canRetreat ? '1' : '0.5';
     retreatBtn.textContent = '🏃 撤退寶可夢';
@@ -581,10 +595,16 @@ function inspectCard(card, location, slotIndex = null) {
     }
   } else if (location === 'self_active' && isMyTurn && currentGameState.status !== 'finished') {
     // Active actions: Attacks & Retreat
-    if (currentGameState.turnNumber > 1 && !(player.turnFlags && player.turnFlags.attacked)) {
+    const selfStatus = Array.isArray(card.statusConditions) ? card.statusConditions : [];
+    const selfImmobilized = selfStatus.includes('paralyzed') || selfStatus.includes('asleep');
+    if (selfImmobilized) {
+      const reason = selfStatus.includes('paralyzed') ? '⚡麻痺' : '💤睡眠';
+      actionsHtml += `<div class="form-hint" style="color: #fbbf24; font-weight: bold;">⚠️ 處於${reason}狀態，本回合無法攻擊或撤退！</div>`;
+    }
+    if (currentGameState.turnNumber > 1 && !(player.turnFlags && player.turnFlags.attacked) && !selfImmobilized) {
       actionsHtml += `<button class="btn btn-accent" onclick="openAttackChoiceModal()">⚔️ 選擇招式進行攻擊</button>`;
     }
-    if (!player.turnFlags.retreated && !(player.turnFlags && player.turnFlags.attacked) && player.bench.length > 0) {
+    if (!player.turnFlags.retreated && !(player.turnFlags && player.turnFlags.attacked) && player.bench.length > 0 && !selfImmobilized) {
       actionsHtml += `<button class="btn btn-secondary" onclick="openRetreatChoiceModal()">🏃 撤退至備戰區</button>`;
     }
   }
@@ -659,6 +679,23 @@ function inspectCard(card, location, slotIndex = null) {
           <span style="font-size: 0.85rem; color: #94a3b8;">${card.subtypes ? card.subtypes.join(' / ') : ''}</span>
         </div>
         ${card.hp ? `<div style="font-size: 0.95rem; font-weight: bold; color: #ef4444;">當前 HP: ${card.currentHp || card.hp} / ${card.maxHp || card.hp} (傷害: ${card.damage || 0})</div>` : ''}
+        ${(Array.isArray(card.statusConditions) && card.statusConditions.length > 0) ? `
+          <div style="background: rgba(168, 85, 247, 0.14); border: 1px solid rgba(192, 132, 252, 0.45); padding: 8px; border-radius: 8px; font-size: 0.8rem;">
+            <strong style="color: #e9d5ff;">目前特殊狀態：</strong>
+            <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 3px; color: #f1f5f9;">
+              ${card.statusConditions.map(c => {
+                const desc = {
+                  poisoned: '☠️ <b>中毒</b>：寶可夢檢查時受到 10 點持續傷害',
+                  burned: '🔥 <b>灼傷</b>：寶可夢檢查時受到 20 點持續傷害（擲硬幣正面則解除）',
+                  paralyzed: '⚡ <b>麻痺</b>：無法攻擊或撤退，自己回合結束時解除',
+                  asleep: '💤 <b>睡眠</b>：無法攻擊或撤退，寶可夢檢查擲硬幣正面則醒來',
+                  confused: '💫 <b>混亂</b>：攻擊前擲硬幣，反面則攻擊失敗並對自己造成 30 點傷害'
+                };
+                return `<div>${desc[c] || c}</div>`;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
         ${abilityHtml}
         ${guideHtml}
       </div>

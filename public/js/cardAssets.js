@@ -321,6 +321,26 @@ function renderCardHtml(card, options = {}) {
     toolBadgeHtml = `<div class="tool-badge" title="${card.attachedTool.name}">🪖 ${card.attachedTool.name}</div>`;
   }
 
+  // Special status condition badges (中毒 / 灼傷 / 麻痺 / 睡眠 / 混亂)
+  let statusBadgesHtml = '';
+  if (Array.isArray(card.statusConditions) && card.statusConditions.length > 0) {
+    const statusMap = {
+      poisoned: { label: '☠️ 中毒', cls: 'status-poisoned', title: '中毒：寶可夢檢查時受到 10 點傷害' },
+      burned: { label: '🔥 灼傷', cls: 'status-burned', title: '灼傷：寶可夢檢查時受到 20 點傷害，擲硬幣正面則解除' },
+      paralyzed: { label: '⚡ 麻痺', cls: 'status-paralyzed', title: '麻痺：無法攻擊或撤退，自己回合結束時自動解除' },
+      asleep: { label: '💤 睡眠', cls: 'status-asleep', title: '睡眠：無法攻擊或撤退，檢查時擲硬幣正面則醒來' },
+      confused: { label: '💫 混亂', cls: 'status-confused', title: '混亂：攻擊前須擲硬幣，反面則攻擊失敗並對自己造成 30 點傷害' }
+    };
+    const pills = card.statusConditions
+      .map(c => statusMap[c])
+      .filter(Boolean)
+      .map(s => `<span class="status-pill ${s.cls}" title="${s.title}">${s.label}</span>`)
+      .join('');
+    if (pills) {
+      statusBadgesHtml = `<div class="status-conditions-strip">${pills}</div>`;
+    }
+  }
+
   // Attack preview
   let attackHtml = '';
   if (isPokemon && card.attacks && card.attacks.length > 0) {
@@ -377,6 +397,7 @@ function renderCardHtml(card, options = {}) {
         </div>
         ${damageBadgeHtml}
         ${toolBadgeHtml}
+        ${statusBadgesHtml}
         ${energyDotsHtml}
       </div>
     `;
@@ -387,6 +408,7 @@ function renderCardHtml(card, options = {}) {
     <div class="ptcg-card" data-instance-id="${card.instanceId || ''}" style="${borderStyle}">
       ${damageBadgeHtml}
       ${toolBadgeHtml}
+      ${statusBadgesHtml}
       <div class="card-header">
         <span style="font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px;">${card.name}</span>
         ${isPokemon ? `<span class="card-hp">HP ${currentHp}/${maxHp}</span>` : ''}

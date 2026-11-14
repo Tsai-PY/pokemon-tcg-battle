@@ -2308,6 +2308,12 @@ function findCardByName(rawName) {
 
     nextTurn() {
       if (this.status === 'finished') return;
+      this.processPokemonCheckup(this.activePlayerIndex);
+      if (this.status === 'finished') {
+        if (window.renderGameState) window.renderGameState(this.getState(0));
+        return;
+      }
+
       this.turnNumber++;
       this.activePlayerIndex = 1 - this.activePlayerIndex;
       const cur = this.players[this.activePlayerIndex];
@@ -2333,6 +2339,95 @@ function findCardByName(rawName) {
 
       if (cur.isAi) {
         setTimeout(() => this.runAiTurn(), 1200);
+      }
+    }
+
+    applySpecialCondition(target, condition) {
+      if (!target) return;
+      if (!Array.isArray(target.statusConditions)) target.statusConditions = [];
+      const exclusive = ['paralyzed', 'asleep', 'confused'];
+      if (exclusive.includes(condition)) {
+        target.statusConditions = target.statusConditions.filter(c => !exclusive.includes(c));
+      }
+      if (!target.statusConditions.includes(condition)) {
+        target.statusConditions.push(condition);
+      }
+      const labels = {
+        poisoned: '☠️ 中毒',
+        burned: '🔥 灼傷',
+        paralyzed: '⚡ 麻痺',
+        asleep: '💤 睡眠',
+        confused: '💫 混亂'
+      };
+      this.log(`✨ 特殊狀態：「${target.name}」陷入了【${labels[condition] || condition}】狀態！`);
+    }
+
+    processPokemonCheckup(endingPlayerIndex) {
+      for (let idx = 0; idx < this.players.length; idx++) {
+        const owner = this.players[idx];
+        const opp = this.players[1 - idx];
+        const active = owner.active;
+        if (!active || !Array.isArray(active.statusConditions) || active.statusConditions.length === 0) continue;
+
+        if (active.statusConditions.includes('poisoned')) {
+          active.damage = (active.damage || 0) + 10;
+          const maxHp = active.hp + (active.maxHpBonus || 0);
+          this.log(`☠️【寶可夢檢查】「${active.name}」因中毒受到 10 點持續傷害！（HP: ${Math.max(0, maxHp - active.damage)}/${maxHp}）`);
+        }
+
+        if (active.statusConditions.includes('burned')) {
+          active.damage = (active.damage || 0) + 20;
+          const maxHp = active.hp + (active.maxHpBonus || 0);
+          this.log(`🔥【寶可夢檢查】「${active.name}」因灼傷受到 20 點持續傷害！（HP: ${Math.max(0, maxHp - active.damage)}/${maxHp}）`);
+          if (Math.random() < 0.5) {
+            active.statusConditions = active.statusConditions.filter(c => c !== 'burned');
+            this.log(`🪙 灼傷擲硬幣為正面！「${active.name}」的灼傷狀態解除了！`);
+          } else {
+            this.log(`🪙 灼傷擲硬幣為反面，「${active.name}」仍處於灼傷狀態。`);
+          }
+        }
+
+        if (active.statusConditions.includes('asleep')) {
+          if (Math.random() < 0.5) {
+            active.statusConditions = active.statusConditions.filter(c => c !== 'asleep');
+            this.log(`🪙 睡眠擲硬幣為正面！「${active.name}」醒來了！`);
+          } else {
+            this.log(`💤 睡眠擲硬幣為反面，「${active.name}」仍在沉睡中。`);
+          }
+        }
+
+        if (idx === endingPlayerIndex && active.statusConditions.includes('paralyzed')) {
+          active.statusConditions = active.statusConditions.filter(c => c !== 'paralyzed');
+          this.log(`⚡【寶可夢檢查】${owner.name} 回合結束，「${active.name}」的麻痺狀態自動解除了！`);
+        }
+
+        const effectiveMaxHp = active.hp + (active.maxHpBonus || 0);
+        if (active.damage >= effectiveMaxHp) {
+          this.log(`💀【昏厥！】「${active.name}」因持續異常狀態傷害倒下了！`);
+          const toDiscard = [active, ...(active.attachedEnergy || [])];
+          if (active.attachedTool) toDiscard.push(active.attachedTool);
+          owner.discard.push(...toDiscard);
+          owner.active = null;
+          const prizesToTake = active.isEx ? 2 : 1;
+          const taken = opp.prizes.splice(0, prizesToTake);
+          opp.hand.push(...taken);
+          this.log(`🏆 ${opp.name} 獲得了 ${taken.length} 張獎賞卡！`);
+          if (opp.prizes.length === 0) {
+            this.status = 'finished';
+            this.winner = 1 - idx;
+            this.winReason = `${opp.name} 拿完了所有的 6 張獎賞卡！`;
+            return;
+          }
+          if (owner.bench.length > 0) {
+            owner.active = owner.bench.shift();
+            this.log(`🔄 ${owner.name} 替補：將備戰區的「${owner.active.name}」推上戰鬥場！`);
+          } else {
+            this.status = 'finished';
+            this.winner = 1 - idx;
+            this.winReason = `${owner.name} 場上已無任何寶可夢可替換！`;
+            return;
+          }
+        }
       }
     }
 
@@ -2418,6 +2513,7 @@ function findCardByName(rawName) {
         attachedTool: target.attachedTool || null,
         maxHpBonus: maxHpBonus,
         damage: target.damage || 0,
+        statusConditions: [],
         turnPlayed: this.turnNumber
       };
       if (targetSlot === 'active') p.active = evolved;
@@ -2515,11 +2611,13 @@ function findCardByName(rawName) {
         this.log(`💊「傷藥」：為「${p.active.name}」恢復了 30 點 HP。`);
       } else if (item.name.includes('交替') && p.bench.length > 0) {
         const tmp = p.active;
+        if (tmp) tmp.statusConditions = [];
         p.active = p.bench[0];
         p.bench[0] = tmp;
         this.log(`🔄「寶可夢交替」：將「${tmp.name}」與備戰區「${p.active.name}」互換！`);
       } else if (item.isAceSpec && opp.bench.length > 0) {
         const oppTmp = opp.active;
+        if (oppTmp) oppTmp.statusConditions = [];
         opp.active = opp.bench[0];
         opp.bench[0] = oppTmp;
         this.log(`👑【ACE SPEC 王牌】至尊捕捉器！強行拉出對手的「${opp.active.name}」！`);
@@ -2551,6 +2649,7 @@ function findCardByName(rawName) {
 
         const oppBenchIdx = (typeof params.oppBenchIndex === 'number' && opp.bench[params.oppBenchIndex]) ? params.oppBenchIndex : 0;
         const oldOppActive = opp.active;
+        if (oldOppActive) oldOppActive.statusConditions = [];
         opp.active = opp.bench[oppBenchIdx];
         if (oldOppActive) {
           opp.bench[oppBenchIdx] = oldOppActive;
@@ -2591,10 +2690,14 @@ function findCardByName(rawName) {
       const p = this.players[pIdx];
       if (p.turnFlags.retreated) return { success: false, message: '每回合限撤退 1 次' };
       if (!p.active || !p.bench[benchIdx]) return { success: false, message: '找不到寶可夢' };
+      const st = p.active.statusConditions || [];
+      if (st.includes('paralyzed')) return { success: false, message: `「${p.active.name}」處於⚡麻痺狀態，無法撤退！` };
+      if (st.includes('asleep')) return { success: false, message: `「${p.active.name}」處於💤睡眠狀態，無法撤退！` };
       const cost = p.active.retreatCost || 1;
       if ((p.active.attachedEnergy || []).length < cost) return { success: false, message: `能量不足 (需 ${cost} 個)` };
       p.active.attachedEnergy.splice(0, cost);
       const old = p.active;
+      old.statusConditions = [];
       p.active = p.bench[benchIdx];
       p.bench[benchIdx] = old;
       p.turnFlags.retreated = true;
@@ -2611,6 +2714,10 @@ function findCardByName(rawName) {
       if (this.turnNumber === 1) return { success: false, message: '先攻首回合不可攻擊' };
       if (!p.active) return { success: false, message: '無戰鬥寶可夢' };
 
+      const activeStatus = p.active.statusConditions || [];
+      if (activeStatus.includes('paralyzed')) return { success: false, message: `「${p.active.name}」處於⚡麻痺狀態，無法使出招式！` };
+      if (activeStatus.includes('asleep')) return { success: false, message: `「${p.active.name}」處於💤睡眠狀態，無法使出招式！` };
+
       const at = (p.active.attacks || [])[attackIdx] || { name: '撞擊', damage: 30 };
       const costCheck = checkEnergyCost(at.cost, p.active.attachedEnergy);
       if (!costCheck.canPay) {
@@ -2624,6 +2731,40 @@ function findCardByName(rawName) {
       if (p.turnFlags) p.turnFlags.attacked = true;
       this.log(`⚔️【攻擊】${p.name} 的「${p.active.name}」使出【${at.name}】！`);
 
+      if (activeStatus.includes('confused')) {
+        if (Math.random() < 0.5) {
+          this.log(`🪙 混亂擲硬幣為正面！「${p.active.name}」成功突破混亂使出招式！`);
+        } else {
+          p.active.damage = (p.active.damage || 0) + 30;
+          const selfMax = p.active.hp + (p.active.maxHpBonus || 0);
+          this.log(`💫 混亂擲硬幣為反面！攻擊失敗，「${p.active.name}」對自己造成 30 點傷害！（剩餘 HP: ${Math.max(0, selfMax - p.active.damage)}/${selfMax}）`);
+          if (p.active.damage >= selfMax) {
+            const ko = p.active;
+            const disc = [ko, ...(ko.attachedEnergy || [])];
+            if (ko.attachedTool) disc.push(ko.attachedTool);
+            p.discard.push(...disc);
+            p.active = null;
+            const takeP = opp.prizes.splice(0, ko.isEx ? 2 : 1);
+            opp.hand.push(...takeP);
+            if (opp.prizes.length === 0) {
+              this.status = 'finished';
+              this.winner = 1 - pIdx;
+              this.winReason = `${opp.name} 拿完了所有的 6 張獎賞卡！`;
+              return { success: true };
+            }
+            if (p.bench.length > 0) p.active = p.bench.shift();
+            else {
+              this.status = 'finished';
+              this.winner = 1 - pIdx;
+              this.winReason = `${p.name} 場上已無寶可夢可替換！`;
+              return { success: true };
+            }
+          }
+          this.nextTurn();
+          return { success: true, confusedSelfHit: true };
+        }
+      }
+
       let dmg = typeof at.damage === 'number' ? at.damage : 30;
       if (p.active.name.includes('噴火龍') && at.name.includes('狂暴')) {
         dmg = 180 + (6 - opp.prizes.length) * 30;
@@ -2632,6 +2773,19 @@ function findCardByName(rawName) {
         dmg = 999;
         p.active.damage = (p.active.damage || 0) + 200;
         this.log(`💥「狂暴粉碎」：自身承受 200 點反作用力傷害！`);
+      }
+      if (at.name === '暴雪迴旋曲') {
+        const totalBench = p.bench.length + opp.bench.length;
+        dmg = 20 + totalBench * 20;
+        this.log(`❄️「暴雪迴旋曲」：雙方備戰區共 ${totalBench} 隻寶可夢，造成 ${dmg} 點傷害！`);
+      }
+      if (at.name === '怨言') {
+        dmg = 50 * opp.hand.length;
+        this.log(`👻「怨言」：對手手牌共 ${opp.hand.length} 張，造成 ${dmg} 點傷害！`);
+      }
+      if (at.name === '奇蹟之力' && Array.isArray(p.active.statusConditions) && p.active.statusConditions.length > 0) {
+        p.active.statusConditions = [];
+        this.log(`✨「奇蹟之力」：解除了「${p.active.name}」身上的所有特殊狀態！`);
       }
 
       if (opp.active) {
@@ -2650,6 +2804,19 @@ function findCardByName(rawName) {
         opp.active.damage = (opp.active.damage || 0) + dmg;
         const curHp = Math.max(0, oppMaxHp - opp.active.damage);
         this.log(`💥 對「${opp.active.name}」造成 ${dmg} 點傷害！（剩餘 HP: ${curHp} / ${oppMaxHp}）`);
+
+        if (curHp > 0) {
+          const atkText = at.text || '';
+          if (at.statusEffect) {
+            this.applySpecialCondition(opp.active, at.statusEffect);
+          } else if (atkText.includes('特殊狀態') || atkText.includes('中毒') || atkText.includes('灼傷') || atkText.includes('麻痺') || atkText.includes('睡眠') || atkText.includes('混亂')) {
+            if (atkText.includes('中毒')) this.applySpecialCondition(opp.active, 'poisoned');
+            if (atkText.includes('灼傷')) this.applySpecialCondition(opp.active, 'burned');
+            if (atkText.includes('麻痺')) this.applySpecialCondition(opp.active, 'paralyzed');
+            if (atkText.includes('睡眠')) this.applySpecialCondition(opp.active, 'asleep');
+            if (atkText.includes('混亂')) this.applySpecialCondition(opp.active, 'confused');
+          }
+        }
 
         if (curHp <= 0) {
           this.log(`💀【昏厥！】對手的「${opp.active.name}」倒下了！`);
@@ -2708,7 +2875,8 @@ function findCardByName(rawName) {
       }
 
       // 3. 攻擊或結束回合（第一回合先攻依規則不可使出招式，直接結束回合換玩家回合）
-      if (this.turnNumber > 1 && ai.active) {
+      const aiStatus = ai.active ? (ai.active.statusConditions || []) : [];
+      if (this.turnNumber > 1 && ai.active && !aiStatus.includes('paralyzed') && !aiStatus.includes('asleep')) {
         const attacks = ai.active.attacks || [];
         const usableAttacks = [];
         attacks.forEach((at, idx) => {
@@ -2756,6 +2924,7 @@ function findCardByName(rawName) {
             ...p.active,
             attachedEnergy: p.active.attachedEnergy || [],
             attachedTool: p.active.attachedTool || null,
+            statusConditions: p.active.statusConditions || [],
             maxHpBonus: p.active.maxHpBonus || 0,
             currentHp: Math.max(0, (p.active.hp + (p.active.maxHpBonus || 0)) - (p.active.damage || 0)),
             maxHp: p.active.hp + (p.active.maxHpBonus || 0)
@@ -2764,6 +2933,7 @@ function findCardByName(rawName) {
             ...b,
             attachedEnergy: b.attachedEnergy || [],
             attachedTool: b.attachedTool || null,
+            statusConditions: b.statusConditions || [],
             maxHpBonus: b.maxHpBonus || 0,
             currentHp: Math.max(0, (b.hp + (b.maxHpBonus || 0)) - (b.damage || 0)),
             maxHp: b.hp + (b.maxHpBonus || 0)

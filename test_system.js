@@ -265,6 +265,66 @@ assert.strictEqual(oppPlayer.active.name, '波波', '對手戰鬥場應已更換
 assert.strictEqual(oppPlayer.bench[1].name, '古劍豹ex', '原本的對手戰鬥寶可夢「古劍豹ex」應已移至備戰區槽位 1');
 console.log('✓ 成功發動「老大的指令」，將對手備戰區的「波波」與戰鬥區的「古劍豹ex」互換！');
 
+console.log('\n[Test 9] 測試特殊狀態（中毒、灼傷、麻痺）與持續傷害結算及撤退解除...');
+const statusGame = new PTCGGame(
+  'status_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const sP0 = statusGame.players[0];
+const sP1 = statusGame.players[1];
+statusGame.turnNumber = 2;
+statusGame.activePlayerIndex = 0;
+sP0.deck = Array.from({ length: 10 }, (_, i) => ({ instanceId: `d0_${i}`, name: '雷能量', supertype: 'energy' }));
+sP1.deck = Array.from({ length: 10 }, (_, i) => ({ instanceId: `d1_${i}`, name: '火能量', supertype: 'energy' }));
+sP0.active = {
+  instanceId: 'sa0', name: '毒電嬰', supertype: 'pokemon', hp: 100, damage: 0, retreatCost: 1,
+  attachedEnergy: [{ instanceId: 'e0', name: '雷能量', supertype: 'energy', energyType: 'Lightning' }],
+  attacks: [{ name: '麻痺毒針', cost: ['Lightning'], damage: 20, text: '將對手的戰鬥寶可夢麻痺。' }]
+};
+sP1.active = {
+  instanceId: 'sa1', name: '噴火龍ex', supertype: 'pokemon', hp: 330, damage: 0, retreatCost: 2,
+  attachedEnergy: [
+    { instanceId: 'e1a', name: '火能量', supertype: 'energy', energyType: 'Fire' },
+    { instanceId: 'e1b', name: '火能量', supertype: 'energy', energyType: 'Fire' }
+  ],
+  attacks: [{ name: '火焰爪', cost: ['Fire'], damage: 60, text: '將對手的戰鬥寶可夢灼傷並中毒。' }]
+};
+sP1.bench = [{ instanceId: 'sb1', name: '小火龍', supertype: 'pokemon', hp: 70, damage: 0 }];
+
+// 1. P0 攻擊使 P1 陷入麻痺
+const paraAtk = statusGame.attack(0, 0);
+assert(paraAtk.success, '毒電嬰攻擊應成功');
+assert(sP1.active.statusConditions.includes('paralyzed'), '對手噴火龍ex應陷入麻痺狀態');
+assert.strictEqual(statusGame.activePlayerIndex, 1, '攻擊後應換為玩家 B 回合');
+
+// 2. P1 處於麻痺狀態不可攻擊也不可撤退
+const blockedAtk = statusGame.attack(1, 0);
+assert(!blockedAtk.success && blockedAtk.message.includes('麻痺'), '麻痺時應禁止攻擊');
+const blockedRetreat = statusGame.retreatActive(1, 0);
+assert(!blockedRetreat.success && blockedRetreat.message.includes('麻痺'), '麻痺時應禁止撤退');
+
+// 3. P1 結束回合 -> 寶可夢檢查應自動解除 P1 的麻痺
+statusGame.nextTurn();
+assert(!sP1.active.statusConditions.includes('paralyzed'), '玩家 B 回合結束後麻痺應自動解除');
+assert.strictEqual(statusGame.activePlayerIndex, 0, '應回到玩家 A 回合');
+
+// 4. 測試中毒持續傷害 (+10) 與撤退清除狀態
+statusGame._applySpecialCondition(sP0.active, 'poisoned');
+assert(sP0.active.statusConditions.includes('poisoned'), '毒電嬰應陷入中毒狀態');
+const dmgBeforeCheckup = sP0.active.damage || 0;
+statusGame.nextTurn(); // 觸發寶可夢檢查：中毒 +10
+assert.strictEqual(sP0.active.damage, dmgBeforeCheckup + 10, '寶可夢檢查時中毒應造成 10 點持續傷害');
+
+// 5. 測試撤退解除所有特殊狀態
+statusGame.activePlayerIndex = 1;
+statusGame._applySpecialCondition(sP1.active, 'poisoned');
+statusGame._applySpecialCondition(sP1.active, 'confused');
+const retreatOk = statusGame.retreatActive(1, 0);
+assert(retreatOk.success, '無麻痺/睡眠且能量足夠時撤退應成功');
+assert.strictEqual(sP1.bench[0].statusConditions.length, 0, '撤退回備戰區後應清除所有特殊狀態');
+console.log('✓ 特殊狀態（麻痺禁止行動與自動解除、中毒持續傷害、撤退清除狀態）驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

@@ -489,11 +489,11 @@
 .energy-Metal { background: #94a3b8; }
 .energy-Colorless { background: #cbd5e1; color: #1e293b; }
 
-/* Damage Counter Overlay */
+/* Damage Counter Overlay (positioned below header so it never covers HP) */
 .damage-counter-badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 52%;
+  right: 6px;
   background: #dc2626;
   color: #ffffff;
   font-size: 0.95rem;
@@ -505,23 +505,56 @@
   z-index: 6;
   animation: pulse 1s infinite alternate;
 }
+.bench-card-slot .damage-counter-badge {
+  top: 48%;
+  right: 4px;
+  font-size: 0.78rem;
+  padding: 1px 5px;
+}
 @keyframes pulse {
   0% { transform: scale(1); }
-  100% { transform: scale(1.1); }
+  100% { transform: scale(1.08); }
 }
 
 /* Tool Badge */
 .tool-badge {
   position: absolute;
-  top: 4px;
+  top: 24px;
   left: 4px;
   background: #4f46e5;
   color: #ffffff;
-  font-size: 0.75rem;
-  padding: 2px 6px;
+  font-size: 0.7rem;
+  padding: 1px 6px;
   border-radius: 5px;
   z-index: 6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
+
+/* Special Conditions Strip */
+.status-conditions-strip {
+  position: absolute;
+  top: 52%;
+  left: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 7;
+  pointer-events: none;
+}
+.status-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+}
+.status-poisoned { background: #9333ea; color: #f3e8ff; }
+.status-burned { background: #ea580c; color: #ffedd5; }
+.status-paralyzed { background: #eab308; color: #1e293b; }
+.status-asleep { background: #2563eb; color: #dbeafe; }
+.status-confused { background: #db2777; color: #fce7f3; }
 
 /* Hand Area Docked at Screen Bottom */
 .player-hand-dock {
