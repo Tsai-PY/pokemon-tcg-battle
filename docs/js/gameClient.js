@@ -562,6 +562,13 @@ function inspectCard(card, location, slotIndex = null) {
         } else {
           actionsHtml += `<button class="btn btn-warning" onclick="openUltraBallModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);">🟡 使用高級球（丟 2 張手牌，從牌庫選 1 隻寶可夢）</button>`;
         }
+      } else if (card.name.includes('大地之器') || card.id === 'earthen_vessel' || card.effect === 'earthen_vessel_search_energy') {
+        const discardableHand = (player.hand || []).filter(c => c.instanceId !== card.instanceId);
+        if (discardableHand.length < 1) {
+          actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">🏺 大地之器（沒有其他手牌可丟棄，無法使用）</button>`;
+        } else {
+          actionsHtml += `<button class="btn btn-warning" onclick="openEarthenVesselModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; box-shadow: 0 0 12px rgba(217, 119, 6, 0.4);">🏺 使用大地之器（丟 1 張手牌，從牌庫選最多 2 張基本能量）</button>`;
+        }
       } else if (card.name.includes('巢穴球') || card.id === 'nest_ball') {
         if (player.bench.length >= 5) {
           actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">⚾ 巢穴球（備戰區已滿 5 隻）</button>`;
@@ -750,6 +757,10 @@ function doPlayItem(cardInstanceId) {
     openUltraBallModal(cardInstanceId);
     return;
   }
+  if (card && (card.name.includes('大地之器') || card.id === 'earthen_vessel' || card.effect === 'earthen_vessel_search_energy')) {
+    openEarthenVesselModal(cardInstanceId);
+    return;
+  }
   if (card && (card.name.includes('巢穴球') || card.id === 'nest_ball')) {
     openNestBallModal(cardInstanceId);
     return;
@@ -760,16 +771,17 @@ function doPlayItem(cardInstanceId) {
 
 // ================= ULTRA BALL & SEARCH MODALS =================
 let searchModalState = {
-  mode: null, // 'ultra_ball' | 'nest_ball'
+  mode: null, // 'ultra_ball' | 'nest_ball' | 'earthen_vessel'
   cardInstanceId: null,
   selectedDiscardIds: [],
-  selectedTargetId: null
+  selectedTargetId: null,
+  selectedTargetIds: []
 };
 
 function closeCardSelectionModal() {
   const modal = document.getElementById('card-selection-modal');
   if (modal) modal.classList.remove('active');
-  searchModalState = { mode: null, cardInstanceId: null, selectedDiscardIds: [], selectedTargetId: null };
+  searchModalState = { mode: null, cardInstanceId: null, selectedDiscardIds: [], selectedTargetId: null, selectedTargetIds: [] };
 }
 
 function openUltraBallModal(cardInstanceId) {
@@ -973,6 +985,193 @@ function confirmUltraBallAction() {
     cardInstanceId: searchModalState.cardInstanceId,
     discardCardIds: searchModalState.selectedDiscardIds,
     targetCardId: searchModalState.selectedTargetId
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('play_item', payload);
+}
+
+// Earthen Vessel Modal (大地之器：丟棄 1 張手牌，從牌庫選擇最多 2 張基本能量卡)
+function openEarthenVesselModal(cardInstanceId) {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  const discardableHand = (player.hand || []).filter(c => c.instanceId !== cardInstanceId);
+  if (discardableHand.length < 1) {
+    alert('⚠️ 手牌不足！使用「大地之器」必須將自己的 1 張手牌丟棄到棄牌區。');
+    return;
+  }
+
+  const deckCards = player.deckCards || [];
+  const basicEnergies = deckCards.filter(c => c.supertype === 'energy' && !(c.subtypes && c.subtypes.includes('Special')));
+
+  searchModalState = {
+    mode: 'earthen_vessel',
+    cardInstanceId,
+    selectedDiscardIds: [],
+    selectedTargetId: null,
+    selectedTargetIds: []
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `🏺 大地之器：丟棄 1 張手牌並挑選最多 2 張基本能量`;
+
+  body.innerHTML = `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #f59e0b;">① 請選擇要丟棄的 1 張手牌（必要條件）</span>
+        <span id="ev-discard-count-badge" style="background: #b45309; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: bold;">
+          已選擇 0 / 1 張
+        </span>
+      </div>
+      <div id="ev-hand-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; padding: 4px;">
+        ${discardableHand.map(c => `
+          <div class="ub-card-choice ev-discard-item" id="ev-discard-${c.instanceId}" onclick="toggleEarthenVesselDiscard('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease; user-select: none;">
+            <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+              ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">${(c.supertype === 'pokemon' ? '🐾' : c.supertype === 'energy' ? '⚡' : '🎒')}</span>`}
+            </div>
+            <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+            <div style="font-size: 0.7rem; color: #94a3b8;">${c.supertype === 'pokemon' ? (c.hp ? `HP ${c.hp}` : '寶可夢') : (c.supertype === 'energy' ? '能量卡' : '訓練家卡')}</div>
+            <div class="ev-discard-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">✓ 丟棄</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #10b981;">② 從牌庫選擇最多 2 張基本能量卡（給對手看過後加入手牌）</span>
+        <span id="ev-target-count-badge" style="background: #0f766e; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: bold;">
+          已選擇 0 / 2 張（牌庫共 ${basicEnergies.length} 張）
+        </span>
+      </div>
+      ${basicEnergies.length === 0 ? `
+        <div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; text-align: center; font-size: 0.9rem;">
+          ⚠️ 牌庫中目前沒有基本能量卡（確認丟棄手牌後將直接重洗牌庫）
+        </div>
+      ` : `
+        <div id="ev-deck-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 240px; overflow-y: auto; padding: 4px;">
+          ${basicEnergies.map(c => `
+            <div class="ub-card-choice ev-target-item" id="ev-target-${c.instanceId}" onclick="toggleEarthenVesselTarget('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease; user-select: none;">
+              <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">⚡</span>`}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+              <div style="font-size: 0.7rem; color: #38bdf8;">基本能量卡</div>
+              <div class="ev-target-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #10b981; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">✓ 加入手牌</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+
+  updateEarthenVesselUI();
+  modal.classList.add('active');
+}
+
+function toggleEarthenVesselDiscard(cId) {
+  if (searchModalState.selectedDiscardIds[0] === cId) {
+    searchModalState.selectedDiscardIds = [];
+  } else {
+    searchModalState.selectedDiscardIds = [cId];
+  }
+  updateEarthenVesselUI();
+}
+
+function toggleEarthenVesselTarget(cId) {
+  const arr = searchModalState.selectedTargetIds;
+  const idx = arr.indexOf(cId);
+  if (idx !== -1) {
+    arr.splice(idx, 1);
+  } else {
+    if (arr.length >= 2) {
+      arr.shift();
+    }
+    arr.push(cId);
+  }
+  updateEarthenVesselUI();
+}
+
+function updateEarthenVesselUI() {
+  const handGrid = document.getElementById('ev-hand-grid');
+  if (handGrid) {
+    handGrid.querySelectorAll('.ev-discard-item').forEach(el => {
+      const cId = el.id.replace('ev-discard-', '');
+      const isSelected = searchModalState.selectedDiscardIds.includes(cId);
+      el.style.borderColor = isSelected ? '#ef4444' : '#334155';
+      el.style.background = isSelected ? 'rgba(239, 68, 68, 0.15)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(239, 68, 68, 0.5)' : 'none';
+      const badge = el.querySelector('.ev-discard-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+
+  const discardBadge = document.getElementById('ev-discard-count-badge');
+  if (discardBadge) {
+    const count = searchModalState.selectedDiscardIds.length;
+    discardBadge.textContent = `已選擇 ${count} / 1 張`;
+    discardBadge.style.background = count === 1 ? '#10b981' : '#b45309';
+  }
+
+  const deckGrid = document.getElementById('ev-deck-grid');
+  if (deckGrid) {
+    deckGrid.querySelectorAll('.ev-target-item').forEach(el => {
+      const cId = el.id.replace('ev-target-', '');
+      const isSelected = searchModalState.selectedTargetIds.includes(cId);
+      el.style.borderColor = isSelected ? '#10b981' : '#334155';
+      el.style.background = isSelected ? 'rgba(16, 185, 129, 0.18)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(16, 185, 129, 0.6)' : 'none';
+      const badge = el.querySelector('.ev-target-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+
+  const targetBadge = document.getElementById('ev-target-count-badge');
+  if (targetBadge) {
+    const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+    const total = player && player.deckCards ? player.deckCards.filter(c => c.supertype === 'energy' && !(c.subtypes && c.subtypes.includes('Special'))).length : 0;
+    targetBadge.textContent = `已選擇 ${searchModalState.selectedTargetIds.length} / 2 張（牌庫共 ${total} 張）`;
+  }
+
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    const hasDiscard = searchModalState.selectedDiscardIds.length === 1;
+    if (!hasDiscard) {
+      confirmBtn.disabled = true;
+      confirmBtn.className = 'btn btn-secondary';
+      confirmBtn.style.background = '#475569';
+      confirmBtn.textContent = '請在步驟 ① 選擇 1 張要丟棄的手牌 (0/1)';
+      confirmBtn.onclick = null;
+    } else {
+      const selCount = searchModalState.selectedTargetIds.length;
+      confirmBtn.disabled = false;
+      confirmBtn.className = 'btn btn-warning';
+      confirmBtn.style.background = 'linear-gradient(135deg, #d97706, #b45309)';
+      confirmBtn.style.color = '#fff';
+      confirmBtn.textContent = selCount > 0
+        ? `✨ 確認丟棄 1 張手牌並將 ${selCount} 張基本能量加入手牌`
+        : `✨ 確認丟棄 1 張手牌並洗牌完成檢索（0 張能量）`;
+      confirmBtn.onclick = confirmEarthenVesselAction;
+    }
+  }
+}
+
+function confirmEarthenVesselAction() {
+  if (searchModalState.selectedDiscardIds.length !== 1) {
+    alert('請選擇 1 張要丟棄的手牌！');
+    return;
+  }
+  const payload = {
+    cardInstanceId: searchModalState.cardInstanceId,
+    discardCardIds: searchModalState.selectedDiscardIds,
+    targetCardIds: searchModalState.selectedTargetIds
   };
   sfx.playCard();
   closeCardSelectionModal();

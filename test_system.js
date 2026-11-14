@@ -325,6 +325,52 @@ assert(retreatOk.success, '無麻痺/睡眠且能量足夠時撤退應成功');
 assert.strictEqual(sP1.bench[0].statusConditions.length, 0, '撤退回備戰區後應清除所有特殊狀態');
 console.log('✓ 特殊狀態（麻痺禁止行動與自動解除、中毒持續傷害、撤退清除狀態）驗證全數通過！');
 
+console.log('\n[Test 10] 測試物品卡「大地之器」（丟 1 張手牌、從牌庫選最多 2 張基本能量並洗牌、可不限張數使用）...');
+const evGame = new PTCGGame(
+  'ev_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const evP0 = evGame.players[0];
+evGame.turnNumber = 2;
+evGame.activePlayerIndex = 0;
+
+// 1. 沒有其他手牌可丟棄時應不可使用
+evP0.hand = [
+  { instanceId: 'ev_1', id: 'earthen_vessel', name: '大地之器', supertype: 'trainer', subtypes: ['Item'], effect: 'earthen_vessel_search_energy' }
+];
+evP0.deck = [
+  { instanceId: 'en_1', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'en_2', name: '基本雷能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Lightning' },
+  { instanceId: 'en_sp', name: '雙重渦輪能量', supertype: 'energy', subtypes: ['Special'] }
+];
+const evFail = evGame.playItem(0, 'ev_1');
+assert(!evFail.success, '沒有其他手牌可丟棄時應禁止使用大地之器');
+assert.strictEqual(evP0.hand.length, 1, '使用失敗時大地之器應保留在手牌中');
+
+// 2. 加入其他手牌與第 2 張大地之器，測試正常丟 1 棄牌 + 選 2 張基本能量，且同回合可連續使用多張物品卡
+evP0.hand.push(
+  { instanceId: 'disc_1', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'] },
+  { instanceId: 'ev_2', id: 'earthen_vessel', name: '大地之器', supertype: 'trainer', subtypes: ['Item'], effect: 'earthen_vessel_search_energy' },
+  { instanceId: 'disc_2', name: '波波', supertype: 'pokemon', subtypes: ['Basic'] }
+);
+const evOk = evGame.playItem(0, 'ev_1', {
+  discardCardIds: ['disc_1'],
+  targetCardIds: ['en_1', 'en_2']
+});
+assert(evOk.success, '有其他手牌時使用大地之器應成功');
+assert(evP0.discard.some(c => c.instanceId === 'ev_1') && evP0.discard.some(c => c.instanceId === 'disc_1'), '大地之器與丟棄的 1 張手牌應進入棄牌區');
+assert(evP0.hand.some(c => c.instanceId === 'en_1') && evP0.hand.some(c => c.instanceId === 'en_2'), '選擇的 2 張基本能量應加入手牌');
+assert.strictEqual(evP0.deck.length, 1, '牌庫應僅剩 1 張特殊能量');
+
+// 3. 驗證同回合可再次使用第 2 張大地之器（物品卡不限張數）
+const evOk2 = evGame.playItem(0, 'ev_2', {
+  discardCardIds: ['disc_2'],
+  targetCardIds: []
+});
+assert(evOk2.success, '同一回合應可再次使用物品卡「大地之器」');
+console.log('✓ 「大地之器」丟棄手牌條件、最多選 2 張基本能量與同回合不限張數驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

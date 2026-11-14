@@ -2529,6 +2529,12 @@ function findCardByName(rawName) {
       const opp = this.players[1 - pIdx];
       const idx = p.hand.findIndex(c => c.instanceId === cardId);
       if (idx === -1) return { success: false, message: '找不到卡牌' };
+      const previewItem = p.hand[idx];
+      const isEarthenVessel = previewItem.id === 'earthen_vessel' || previewItem.effect === 'earthen_vessel_search_energy' || (previewItem.name && previewItem.name.includes('大地之器'));
+      if (isEarthenVessel && p.hand.length < 2) {
+        return { success: false, message: '使用「大地之器」必須將 1 張其他手牌丟棄到棄牌區，目前沒有其他手牌可丟棄！' };
+      }
+
       const item = p.hand.splice(idx, 1)[0];
       p.discard.push(item);
 
@@ -2573,6 +2579,52 @@ function findCardByName(rawName) {
           this.log(`🟡「高級球」：${p.name} ${discardStr}，從牌庫挑選了「${targetPokemon.name}」加入手牌，並重洗牌庫！`);
         } else {
           this.log(`🟡「高級球」：${p.name} ${discardStr}，檢索牌庫後未選擇寶可夢，重洗牌庫。`);
+        }
+      } else if (isEarthenVessel) {
+        const discardIds = (params && params.discardCardIds) || (params && params.discardCardId ? [params.discardCardId] : []);
+        let discardedName = '';
+        if (discardIds.length > 0) {
+          const dIdx = p.hand.findIndex(c => c.instanceId === discardIds[0]);
+          if (dIdx !== -1) {
+            const disc = p.hand.splice(dIdx, 1)[0];
+            p.discard.push(disc);
+            discardedName = disc.name;
+          }
+        }
+        if (!discardedName && p.hand.length > 0) {
+          const disc = p.hand.pop();
+          p.discard.push(disc);
+          discardedName = disc.name;
+        }
+
+        const isBasicEnergy = (c) => c.supertype === 'energy' && !(c.subtypes && c.subtypes.includes('Special'));
+        const targetIds = (params && Array.isArray(params.targetCardIds)) ? params.targetCardIds.slice(0, 2) : [];
+        const addedEnergies = [];
+
+        if (targetIds.length > 0) {
+          targetIds.forEach(tId => {
+            const tIdx = p.deck.findIndex(c => c.instanceId === tId && isBasicEnergy(c));
+            if (tIdx !== -1) {
+              const energy = p.deck.splice(tIdx, 1)[0];
+              p.hand.push(energy);
+              addedEnergies.push(energy.name);
+            }
+          });
+        } else if ((!params || !Array.isArray(params.targetCardIds)) && p.isAi) {
+          for (let k = 0; k < 2; k++) {
+            const autoIdx = p.deck.findIndex(isBasicEnergy);
+            if (autoIdx === -1) break;
+            const energy = p.deck.splice(autoIdx, 1)[0];
+            p.hand.push(energy);
+            addedEnergies.push(energy.name);
+          }
+        }
+
+        p.deck = p.deck.sort(() => Math.random() - 0.5);
+        if (addedEnergies.length > 0) {
+          this.log(`🏺「大地之器」：${p.name} 丟棄了「${discardedName}」，從牌庫選擇了「${addedEnergies.join('」、「')}」給對手確認後加入手牌，並重洗牌庫！`);
+        } else {
+          this.log(`🏺「大地之器」：${p.name} 丟棄了「${discardedName}」，檢索牌庫後未加入基本能量卡，並重洗牌庫。`);
         }
       } else if (item.name.includes('巢穴球') || item.id === 'nest_ball' || item.effect === 'search_basic_bench') {
         if (p.bench.length >= 5) {
