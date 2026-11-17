@@ -205,12 +205,58 @@ function getCustomCardImages() {
   }
 }
 
+function compressCardDataUrl(dataUrl, callback) {
+  if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/') || dataUrl.length < 48000) {
+    callback(dataUrl);
+    return;
+  }
+  try {
+    const img = new Image();
+    img.onload = function () {
+      const maxW = 360;
+      const scale = img.width > maxW ? maxW / img.width : 1;
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.78);
+      callback(compressed && compressed.length < dataUrl.length ? compressed : dataUrl);
+    };
+    img.onerror = function () { callback(dataUrl); };
+    img.src = dataUrl;
+  } catch (e) {
+    callback(dataUrl);
+  }
+}
+
 function saveCustomCardImage(cardName, imageUrlOrDataUrl) {
   if (!cardName) return false;
+  const key = cardName.trim();
   try {
     const images = getCustomCardImages();
-    images[cardName.trim()] = imageUrlOrDataUrl;
+    images[key] = imageUrlOrDataUrl;
     localStorage.setItem('ptcg_custom_card_images', JSON.stringify(images));
+    if (typeof window.pushAllSyncToCloud === 'function') {
+      window.pushAllSyncToCloud();
+    }
+    // 若為大型 base64 圖片，背景壓縮後再更新並重推雲端以確保跨裝置同步順暢
+    if (typeof imageUrlOrDataUrl === 'string' && imageUrlOrDataUrl.startsWith('data:image/') && imageUrlOrDataUrl.length >= 48000) {
+      compressCardDataUrl(imageUrlOrDataUrl, (compressed) => {
+        if (compressed && compressed !== imageUrlOrDataUrl) {
+          try {
+            const latest = getCustomCardImages();
+            latest[key] = compressed;
+            localStorage.setItem('ptcg_custom_card_images', JSON.stringify(latest));
+            if (typeof window.pushAllSyncToCloud === 'function') {
+              window.pushAllSyncToCloud();
+            }
+          } catch (e) {}
+        }
+      });
+    }
     return true;
   } catch (e) {
     console.error('saveCustomCardImage error:', e);
@@ -224,6 +270,9 @@ function removeCustomCardImage(cardName) {
     const images = getCustomCardImages();
     delete images[cardName.trim()];
     localStorage.setItem('ptcg_custom_card_images', JSON.stringify(images));
+    if (typeof window.pushAllSyncToCloud === 'function') {
+      window.pushAllSyncToCloud();
+    }
     return true;
   } catch (e) {
     return false;

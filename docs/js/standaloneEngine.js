@@ -7,6 +7,7 @@
   const STORAGE_DECKS = 'ptcg_standalone_decks';
   const STORAGE_GAMES = 'ptcg_standalone_games';
   const CLOUD_USERS_ID = 'ff808181a09d98f701a1c5ac8f147e52';
+  const CLOUD_DATA_ID = 'ff808181a09d98f701a1e95385ae76fa';
 
   // 1. Initial Default Admin and Shared Decks
   const DEFAULT_ADMIN = {
@@ -346,43 +347,256 @@
     return [DEFAULT_ADMIN];
   }
 
-  function saveLocalUsers(users) {
+  async function saveLocalUsers(users) {
     localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
-    // Asynchronously push to cloud store so other devices (iPad, Laptop) get updated immediately!
+    // Push to cloud store using originalFetch so other devices (iPad, PC) stay synced
     try {
-      fetch('https://api.restful-api.dev/objects/' + CLOUD_USERS_ID, {
+      const fetchFn = (typeof originalFetch === 'function') ? originalFetch : window.fetch;
+      const res = await fetchFn('https://api.restful-api.dev/objects/' + CLOUD_USERS_ID, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'ptcg_users_store_v1', data: { users } })
-      }).catch(e => console.warn('Cloud user sync error:', e));
-    } catch (e) {}
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('Cloud user sync error:', e);
+      return false;
+    }
+  }
+
+  function mergeUserLists(local, cloud) {
+    const map = new Map();
+    for (const u of (local || [])) {
+      if (u && u.phone) map.set(u.phone, { ...u });
+    }
+    let needPush = false;
+    for (const cu of (cloud || [])) {
+      if (!cu || !cu.phone) continue;
+      const existing = map.get(cu.phone);
+      if (!existing) {
+        map.set(cu.phone, { ...cu });
+      } else {
+        // Keep whichever has approved status or newer updatedAt/createdAt
+        const cuApproved = cu.status === 'approved' || cu.role === 'admin';
+        const exApproved = existing.status === 'approved' || existing.role === 'admin';
+        if (cuApproved && !exApproved) {
+          map.set(cu.phone, { ...existing, ...cu });
+        } else if (exApproved && !cuApproved) {
+          needPush = true;
+        } else if (cu.updatedAt && (!existing.updatedAt || cu.updatedAt > existing.updatedAt)) {
+          map.set(cu.phone, { ...existing, ...cu });
+        }
+      }
+    }
+    // Check if local had users missing from cloud
+    const cloudPhones = new Set((cloud || []).map(x => x && x.phone).filter(Boolean));
+    for (const u of (local || [])) {
+      if (u && u.phone && !cloudPhones.has(u.phone)) {
+        needPush = true;
+      }
+    }
+    const merged = Array.from(map.values());
+    if (!merged.some(x => x.phone === DEFAULT_ADMIN.phone)) merged.unshift(DEFAULT_ADMIN);
+    return { merged, needPush };
   }
 
   async function syncFromCloud() {
     try {
-      const res = await originalFetch('https://api.restful-api.dev/objects/' + CLOUD_USERS_ID);
+      const fetchFn = (typeof originalFetch === 'function') ? originalFetch : window.fetch;
+      const res = await fetchFn('https://api.restful-api.dev/objects/' + CLOUD_USERS_ID);
+      if (!res.ok) return false;
       const data = await res.json();
       if (data && data.data && Array.isArray(data.data.users)) {
-        const cloudUsers = data.data.users;
         const local = getLocalUsers();
-        // Merge cloud users with local users
-        for (const cu of cloudUsers) {
-          const idx = local.findIndex(x => x.phone === cu.phone);
-          if (idx !== -1) {
-            local[idx] = cu;
-          } else {
-            local.push(cu);
-          }
+        const { merged, needPush } = mergeUserLists(local, data.data.users);
+        localStorage.setItem(STORAGE_USERS, JSON.stringify(merged));
+        if (needPush) {
+          await saveLocalUsers(merged);
         }
-        localStorage.setItem(STORAGE_USERS, JSON.stringify(local));
+        return true;
       }
     } catch (e) {
       console.warn('Sync from cloud failed, using local cache:', e);
     }
+    return false;
   }
 
-  // Initial cloud sync
-  setTimeout(() => syncFromCloud(), 100);
+  function exportAllSyncData() {
+    let customImages = {};
+    let customCards = [];
+    try { customImages = JSON.parse(localStorage.getItem('ptcg_custom_card_images') || '{}'); } catch (e) {}
+    try { customCards = JSON.parse(localStorage.getItem('ptcg_custom_library_cards') || '[]'); } catch (e) {}
+    return {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      users: getLocalUsers(),
+      decks: getLocalDecks(),
+      customCards: Array.isArray(customCards) ? customCards : [],
+      customImages: customImages && typeof customImages === 'object' ? customImages : {}
+    };
+  }
+
+  function importAllSyncData(payload) {
+    if (!payload || typeof payload !== 'object') return { usersAdded: 0, imagesAdded: 0, decksUpdated: 0, cardsAdded: 0 };
+    let usersAdded = 0, imagesAdded = 0, decksUpdated = 0, cardsAdded = 0;
+
+    // 1. Merge users
+    if (Array.isArray(payload.users)) {
+      const localU = getLocalUsers();
+      const prevLen = localU.length;
+      const { merged } = mergeUserLists(localU, payload.users);
+      localStorage.setItem(STORAGE_USERS, JSON.stringify(merged));
+      usersAdded = Math.max(0, merged.length - prevLen);
+    }
+
+    // 2. Merge custom card images (照片)
+    if (payload.customImages && typeof payload.customImages === 'object') {
+      let localImgs = {};
+      try { localImgs = JSON.parse(localStorage.getItem('ptcg_custom_card_images') || '{}'); } catch (e) {}
+      for (const [k, v] of Object.entries(payload.customImages)) {
+        if (k && v && localImgs[k] !== v) {
+          localImgs[k] = v;
+          imagesAdded++;
+        }
+      }
+      localStorage.setItem('ptcg_custom_card_images', JSON.stringify(localImgs));
+    }
+
+    // 3. Merge custom library cards (全部牌組庫新增卡牌)
+    if (Array.isArray(payload.customCards) && payload.customCards.length > 0) {
+      let localCards = [];
+      try { localCards = JSON.parse(localStorage.getItem('ptcg_custom_library_cards') || '[]'); } catch (e) {}
+      if (!Array.isArray(localCards)) localCards = [];
+      for (const cc of payload.customCards) {
+        if (!cc || !cc.name) continue;
+        const idx = localCards.findIndex(x => x.name === cc.name);
+        if (idx === -1) {
+          localCards.push(cc);
+          cardsAdded++;
+        } else {
+          localCards[idx] = cc;
+        }
+      }
+      localStorage.setItem('ptcg_custom_library_cards', JSON.stringify(localCards));
+    }
+
+    // 4. Merge decks (以 updatedAt 較新者為準)
+    if (Array.isArray(payload.decks) && payload.decks.length === 10) {
+      const localDecks = getLocalDecks();
+      const mergedDecks = localDecks.map((ld, i) => {
+        const cd = payload.decks[i];
+        if (!cd) return ld;
+        if (!ld.updatedAt || (cd.updatedAt && cd.updatedAt > ld.updatedAt)) {
+          if (JSON.stringify(ld) !== JSON.stringify(cd)) decksUpdated++;
+          return cd;
+        }
+        return ld;
+      });
+      localStorage.setItem(STORAGE_DECKS, JSON.stringify(mergedDecks));
+    }
+
+    return { usersAdded, imagesAdded, decksUpdated, cardsAdded };
+  }
+
+  let cloudPushTimer = null;
+  async function pushAllSyncToCloud(immediate = false) {
+    if (!immediate) {
+      if (cloudPushTimer) clearTimeout(cloudPushTimer);
+      return new Promise((resolve) => {
+        cloudPushTimer = setTimeout(async () => {
+          resolve(await pushAllSyncToCloud(true));
+        }, 250);
+      });
+    }
+    const bundle = exportAllSyncData();
+    const fetchFn = (typeof originalFetch === 'function') ? originalFetch : window.fetch;
+    let usersOk = false;
+    let dataOk = false;
+    let dataError = '';
+    const payloadObj = {
+      name: 'ptcg_sync_store_v2',
+      data: {
+        updatedAt: bundle.exportedAt,
+        decks: bundle.decks,
+        customCards: bundle.customCards,
+        customImages: bundle.customImages
+      }
+    };
+    const jsonBody = JSON.stringify(payloadObj);
+    const sizeKB = Math.round(jsonBody.length / 1024);
+
+    try {
+      usersOk = await saveLocalUsers(bundle.users);
+    } catch (e) {}
+
+    try {
+      const res = await fetchFn('https://api.restful-api.dev/objects/' + CLOUD_DATA_ID, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonBody
+      });
+      dataOk = res.ok;
+      if (!res.ok) dataError = `HTTP ${res.status}`;
+    } catch (e) {
+      dataError = e.message || '連線失敗';
+    }
+
+    window._lastCloudSyncStatus = {
+      at: new Date().toLocaleTimeString(),
+      usersOk,
+      dataOk,
+      sizeKB,
+      dataError
+    };
+    return { success: usersOk && dataOk, usersOk, dataOk, sizeKB, dataError };
+  }
+
+  async function pullAllSyncFromCloud() {
+    const fetchFn = (typeof originalFetch === 'function') ? originalFetch : window.fetch;
+    const usersOk = await syncFromCloud();
+    let dataOk = false;
+    let stats = { usersAdded: 0, imagesAdded: 0, decksUpdated: 0, cardsAdded: 0 };
+
+    try {
+      const res = await fetchFn('https://api.restful-api.dev/objects/' + CLOUD_DATA_ID);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.data) {
+          const localImgs = (() => { try { return JSON.parse(localStorage.getItem('ptcg_custom_card_images') || '{}'); } catch (e) { return {}; } })();
+          const cloudImgs = json.data.customImages || {};
+          const localHasExtraImages = Object.keys(localImgs).some(k => !cloudImgs[k]);
+          const localCards = (() => { try { return JSON.parse(localStorage.getItem('ptcg_custom_library_cards') || '[]'); } catch (e) { return []; } })();
+          const cloudCards = json.data.customCards || [];
+          const localHasExtraCards = Array.isArray(localCards) && localCards.some(c => c && !cloudCards.some(cc => cc.name === c.name));
+
+          stats = importAllSyncData({
+            decks: json.data.decks,
+            customCards: json.data.customCards,
+            customImages: json.data.customImages
+          });
+          dataOk = true;
+
+          // If this device had local photos/cards not yet in cloud, push them up automatically
+          if (localHasExtraImages || localHasExtraCards) {
+            await pushAllSyncToCloud(true);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Pull cloud data error:', e);
+    }
+
+    window._lastCloudSyncStatus = {
+      at: new Date().toLocaleTimeString(),
+      usersOk,
+      dataOk,
+      stats
+    };
+    return { success: usersOk || dataOk, usersOk, dataOk, stats };
+  }
+
+  // Initial cloud sync (accounts + photos + decks + custom cards)
+  setTimeout(() => pullAllSyncFromCloud(), 150);
 
   function getLocalDecks() {
     try {
@@ -395,6 +609,7 @@
 
   function saveLocalDecks(decks) {
     localStorage.setItem(STORAGE_DECKS, JSON.stringify(decks));
+    pushAllSyncToCloud();
   }
 
   // Active in-browser games
@@ -3072,7 +3287,7 @@ function findCardByName(rawName) {
         createdAt: new Date().toISOString()
       };
       users.push(newU);
-      saveLocalUsers(users);
+      await saveLocalUsers(users);
       return new Response(JSON.stringify({ success: true, message: '註冊申請成功！請等待系統管理員審核通過後即可登入對戰。', user: newU }), { status: 200 });
     }
 
@@ -3097,7 +3312,8 @@ function findCardByName(rawName) {
       const target = users.find(x => x.phone === body.phone);
       if (target) {
         target.status = body.status;
-        saveLocalUsers(users);
+        target.updatedAt = new Date().toISOString();
+        await saveLocalUsers(users);
         return new Response(JSON.stringify({ success: true, message: `會員 ${body.phone} 審核狀態已更新！` }), { status: 200 });
       }
       return new Response(JSON.stringify({ success: false, message: '找不到會員' }), { status: 400 });
@@ -3107,7 +3323,7 @@ function findCardByName(rawName) {
     if (url === '/api/admin/members/delete' && method === 'POST') {
       let users = getLocalUsers();
       users = users.filter(x => x.phone !== body.phone);
-      saveLocalUsers(users);
+      await saveLocalUsers(users);
       return new Response(JSON.stringify({ success: true, message: `會員 ${body.phone} 已刪除` }), { status: 200 });
     }
 
@@ -3247,6 +3463,10 @@ function findCardByName(rawName) {
   window.getLocalUsers = getLocalUsers;
   window.saveLocalUsers = saveLocalUsers;
   window.syncCloudUsers = syncFromCloud;
+  window.pushAllSyncToCloud = pushAllSyncToCloud;
+  window.pullAllSyncFromCloud = pullAllSyncFromCloud;
+  window.exportAllSyncData = exportAllSyncData;
+  window.importAllSyncData = importAllSyncData;
   window.CARD_DATABASE = CARD_DATABASE;
   window.findCardByName = findCardByName;
   window.normalizeCardName = normalizeCardName;

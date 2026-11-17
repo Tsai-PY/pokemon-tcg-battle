@@ -303,6 +303,7 @@ function saveNewCardToLibrary() {
       customList.push(newCard);
     }
     localStorage.setItem('ptcg_custom_library_cards', JSON.stringify(customList));
+    if (typeof window.pushAllSyncToCloud === 'function') window.pushAllSyncToCloud();
   } catch (e) {
     console.error('Failed to save custom card:', e);
   }
@@ -402,6 +403,7 @@ async function handleLibraryCardPhotoUpload(event) {
         customList.push(newCard);
       }
       localStorage.setItem('ptcg_custom_library_cards', JSON.stringify(customList));
+      if (typeof window.pushAllSyncToCloud === 'function') window.pushAllSyncToCloud();
     } catch (err) {
       console.error(err);
     }
