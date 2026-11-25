@@ -597,6 +597,8 @@ function inspectCard(card, location, slotIndex = null) {
           }
         } else if (card.id === 'firebreather' || (card.name && card.name.includes('吹火人'))) {
           actionsHtml += `<button class="btn btn-warning" onclick="openFirebreatherModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);">🔥 使用吹火人（從牌庫選最多 7 張基本火能量）</button>`;
+        } else if (card.id === 'dawn_supporter' || (card.name && card.name.includes('小光'))) {
+          actionsHtml += `<button class="btn btn-warning" onclick="openDawnModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #ec4899, #db2777); color: #fff; box-shadow: 0 0 12px rgba(236, 72, 153, 0.4);">🌟 使用小光（從牌庫選基礎、1階、2階寶可夢各 1 張）</button>`;
         } else {
           actionsHtml += `<button class="btn btn-primary" onclick="doPlaySupporter('${card.instanceId}')">👤 使用此支援者卡</button>`;
         }
@@ -1432,8 +1434,125 @@ function doPlaySupporter(cardInstanceId) {
     openFirebreatherModal(cardInstanceId);
     return;
   }
+  if (card && (card.id === 'dawn_supporter' || (card.name && card.name.includes('小光')))) {
+    openDawnModal(cardInstanceId);
+    return;
+  }
   sfx.playCard();
   sendGameAction('play_supporter', { cardInstanceId });
+}
+
+// 小光 Modal：從牌庫選擇「基礎」「1階進化」「2階進化」寶可夢各 1 張加入手牌並重洗牌庫
+function openDawnModal(cardInstanceId) {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  const deckCards = player.deckCards || [];
+  const hasStage = (c, st) => c.supertype === 'pokemon' && Array.isArray(c.subtypes) && c.subtypes.includes(st);
+  const basics = deckCards.filter(c => hasStage(c, 'Basic'));
+  const stage1s = deckCards.filter(c => hasStage(c, 'Stage 1'));
+  const stage2s = deckCards.filter(c => hasStage(c, 'Stage 2'));
+
+  searchModalState = {
+    mode: 'dawn',
+    cardInstanceId,
+    selectedDiscardIds: [],
+    selectedTargetId: null,
+    selectedTargetIds: [],
+    dawnSelection: { basicId: null, stage1Id: null, stage2Id: null }
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `🌟 小光：從牌庫選擇基礎、1階進化、2階進化寶可夢各 1 張`;
+
+  const renderGroup = (key, label, color, list) => `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 800; font-size: 0.95rem; color: ${color};">${label}（最多 1 張）</span>
+        <span id="dawn-badge-${key}" style="color: #94a3b8; font-size: 0.82rem;">牌庫共 ${list.length} 張</span>
+      </div>
+      ${list.length === 0 ? `
+        <div style="padding: 10px; background: #1e293b; border-radius: 8px; color: #94a3b8; text-align: center; font-size: 0.85rem;">牌庫中無此階段寶可夢</div>
+      ` : `
+        <div id="dawn-grid-${key}" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; max-height: 170px; overflow-y: auto; padding: 4px;">
+          ${list.map(c => `
+            <div class="ub-card-choice dawn-item-${key}" id="dawn-${key}-${c.instanceId}" onclick="selectDawnTarget('${key}', '${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease; user-select: none;">
+              <div style="height: 84px; overflow: hidden; border-radius: 6px; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 1.8rem;">🐾</span>`}
+              </div>
+              <div style="font-size: 0.78rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+              <div style="font-size: 0.68rem; color: ${color};">${c.hp ? `HP ${c.hp}` : '寶可夢'}</div>
+              <div class="dawn-picked-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #ec4899; color: #fff; font-size: 0.62rem; font-weight: bold; padding: 2px 5px; border-radius: 4px;">✓ 已選</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+
+  body.innerHTML = `
+    ${renderGroup('basicId', '① 【基礎】寶可夢', '#38bdf8', basics)}
+    ${renderGroup('stage1Id', '② 【1階進化】寶可夢', '#fbbf24', stage1s)}
+    ${renderGroup('stage2Id', '③ 【2階進化】寶可夢', '#f472b6', stage2s)}
+  `;
+
+  updateDawnUI();
+  modal.classList.add('active');
+}
+
+function selectDawnTarget(stageKey, cId) {
+  if (!searchModalState.dawnSelection) return;
+  searchModalState.dawnSelection[stageKey] = (searchModalState.dawnSelection[stageKey] === cId) ? null : cId;
+  updateDawnUI();
+}
+
+function updateDawnUI() {
+  const sel = searchModalState.dawnSelection || {};
+  ['basicId', 'stage1Id', 'stage2Id'].forEach(key => {
+    const grid = document.getElementById(`dawn-grid-${key}`);
+    if (!grid) return;
+    grid.querySelectorAll(`.dawn-item-${key}`).forEach(el => {
+      const cId = el.id.replace(`dawn-${key}-`, '');
+      const isSelected = sel[key] === cId;
+      el.style.borderColor = isSelected ? '#ec4899' : '#334155';
+      el.style.background = isSelected ? 'rgba(236, 72, 153, 0.18)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(236, 72, 153, 0.6)' : 'none';
+      const badge = el.querySelector('.dawn-picked-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  });
+
+  const count = [sel.basicId, sel.stage1Id, sel.stage2Id].filter(Boolean).length;
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.className = 'btn btn-warning';
+    confirmBtn.style.background = 'linear-gradient(135deg, #ec4899, #db2777)';
+    confirmBtn.style.color = '#fff';
+    confirmBtn.textContent = count > 0
+      ? `🌟 確認將已選 ${count} 張寶可夢加入手牌並重洗牌庫`
+      : `🌟 確認不拿取並重洗牌庫`;
+    confirmBtn.onclick = confirmDawnAction;
+  }
+}
+
+function confirmDawnAction() {
+  const sel = searchModalState.dawnSelection || {};
+  const payload = {
+    cardInstanceId: searchModalState.cardInstanceId,
+    basicId: sel.basicId || null,
+    stage1Id: sel.stage1Id || null,
+    stage2Id: sel.stage2Id || null
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('play_supporter', payload);
 }
 
 function openFirebreatherModal(cardInstanceId) {

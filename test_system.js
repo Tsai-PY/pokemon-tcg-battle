@@ -432,6 +432,35 @@ assert(ppOk.success, '寶可平板選取火恐龍應成功');
 assert(ppP0.hand.some(c => c.instanceId === 'evo_1'), '無規則寶可夢「火恐龍」應加入手牌');
 console.log('✓ 「寶可平板」排除擁有規則的寶可夢並檢索無規則寶可夢加入手牌驗證全數通過！');
 
+console.log('\n[Test 13] 測試支援者卡「小光」（從牌庫選擇基礎、1階進化、2階進化寶可夢各 1 張加入手牌並重洗牌庫）...');
+const dawnGame = new PTCGGame(
+  'dawn_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const dawnP0 = dawnGame.players[0];
+dawnGame.turnNumber = 2;
+dawnGame.activePlayerIndex = 0;
+dawnP0.hand = [
+  { instanceId: 'dawn_1', id: 'dawn_supporter', name: '小光', supertype: 'trainer', subtypes: ['Supporter'] }
+];
+dawnP0.deck = [
+  { instanceId: 'b_1', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'] },
+  { instanceId: 's1_1', name: '火恐龍', supertype: 'pokemon', subtypes: ['Stage 1'] },
+  { instanceId: 's2_1', name: '超級噴火龍Xex', supertype: 'pokemon', subtypes: ['Stage 2', 'ex'], isEx: true },
+  { instanceId: 'en_x', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'] }
+];
+const dawnRes = dawnGame.playSupporter(0, 'dawn_1', {
+  basicId: 'b_1',
+  stage1Id: 's1_1',
+  stage2Id: 's2_1'
+});
+assert(dawnRes.success, '使用小光應成功');
+assert.strictEqual(dawnP0.hand.length, 3, '手牌應加入基礎、1階進化、2階進化各 1 張共 3 張寶可夢');
+assert(dawnP0.hand.some(c => c.instanceId === 'b_1') && dawnP0.hand.some(c => c.instanceId === 's1_1') && dawnP0.hand.some(c => c.instanceId === 's2_1'), '三階段寶可夢應皆在手牌中');
+assert.strictEqual(dawnP0.deck.length, 1, '牌庫應僅剩 1 張基本火能量');
+console.log('✓ 「小光」從牌庫選擇基礎、1階進化、2階進化寶可夢各 1 張加入手牌驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

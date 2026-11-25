@@ -3224,6 +3224,35 @@ function findCardByName(rawName) {
         } else {
           this.log(`🔥「吹火人」：${p.name} 檢索牌庫後未加入基本火能量，並重洗牌庫。`);
         }
+      } else if (supp.id === 'dawn_supporter' || (supp.name && supp.name.includes('小光'))) {
+        const hasStage = (c, stage) => c.supertype === 'pokemon' && Array.isArray(c.subtypes) && c.subtypes.includes(stage);
+        const pickedNames = [];
+        const specs = [
+          { key: 'basicId', stage: 'Basic' },
+          { key: 'stage1Id', stage: 'Stage 1' },
+          { key: 'stage2Id', stage: 'Stage 2' }
+        ];
+        const hasExplicitParams = params && (('basicId' in params) || ('stage1Id' in params) || ('stage2Id' in params));
+        for (const spec of specs) {
+          const reqId = params && params[spec.key];
+          let tIdx = -1;
+          if (reqId) {
+            tIdx = p.deck.findIndex(c => c.instanceId === reqId && hasStage(c, spec.stage));
+          } else if (!hasExplicitParams) {
+            tIdx = p.deck.findIndex(c => hasStage(c, spec.stage));
+          }
+          if (tIdx !== -1) {
+            const picked = p.deck.splice(tIdx, 1)[0];
+            p.hand.push(picked);
+            pickedNames.push(picked.name);
+          }
+        }
+        p.deck = this._shuffle(p.deck);
+        if (pickedNames.length > 0) {
+          this.log(`🌟「小光」：${p.name} 從牌庫選擇了「${pickedNames.join('」、「')}」給對手看過後加入手牌，並重洗牌庫！`);
+        } else {
+          this.log(`🌟「小光」：${p.name} 檢索牌庫後未加入寶可夢，並重洗牌庫。`);
+        }
       } else {
         const draw = p.deck.splice(0, Math.min(3, p.deck.length));
         p.hand.push(...draw);
