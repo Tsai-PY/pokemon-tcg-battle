@@ -381,7 +381,7 @@ const server = http.createServer(async (req, res) => {
         actionRes = game.retreatActive(pIdx, body.benchIndex);
         break;
       case 'attack':
-        actionRes = game.attack(pIdx, body.attackIndex || 0);
+        actionRes = game.attack(pIdx, body.attackIndex || 0, body.params || body);
         break;
       case 'end_turn':
         game.nextTurn();
@@ -517,7 +517,7 @@ wss.on('connection', (ws) => {
             actionRes = game.retreatActive(pIdx, payload.benchIndex);
             break;
           case 'attack':
-            actionRes = game.attack(pIdx, payload.attackIndex || 0);
+            actionRes = game.attack(pIdx, payload.attackIndex || 0, payload.params || payload);
             break;
           case 'end_turn':
             game.nextTurn();

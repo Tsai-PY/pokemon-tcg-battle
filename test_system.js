@@ -630,6 +630,71 @@ assert(swOk2.success, '同一回合應可再次使用第 2 張寶可夢交替');
 assert.strictEqual(swP0.active.name, '比克提尼', '戰鬥場應已更換為比克提尼');
 console.log('✓ 「寶可夢交替」指定互換、解除異常狀態與同回合不限張數驗證全數通過！');
 
+console.log('\n[Test 18] 測試熔蟻獸「舔舔捕捉」、物品卡「奇跡修正檔」與「火恐龍」HP/吐火更新...');
+const { findCardByName } = require('./lib/cardDb');
+const charmeleonCard = findCardByName('火恐龍');
+assert.strictEqual(charmeleonCard.hp, 110, '火恐龍 HP 應為 110');
+assert.strictEqual(charmeleonCard.attacks[0].name, '吐火', '火恐龍招式應為「吐火」');
+assert.deepStrictEqual(charmeleonCard.attacks[0].cost, ['Fire'], '火恐龍「吐火」應只需 1 個火能量');
+assert.strictEqual(charmeleonCard.attacks[0].damage, 40, '火恐龍「吐火」傷害應為 40');
+
+// 測試熔蟻獸【舔舔捕捉】
+const lcGame = new PTCGGame(
+  'lc_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const lcP0 = lcGame.players[0];
+const lcP1 = lcGame.players[1];
+lcGame.turnNumber = 2;
+lcGame.activePlayerIndex = 0;
+lcP0.active = {
+  instanceId: 'hm_1', id: 'heatmor_mt', name: '熔蟻獸', supertype: 'pokemon', subtypes: ['Basic'],
+  hp: 120, types: ['Fire'], attachedEnergy: [{ instanceId: 'ce1', name: '基本火能量', supertype: 'energy', energyType: 'Fire' }],
+  attacks: [{ name: '舔舔捕捉', cost: ['Colorless'], damage: 0 }]
+};
+lcP1.active = { instanceId: 'opp_x', name: '小火龍', supertype: 'pokemon', hp: 80, damage: 0 };
+lcP1.deck = [{ instanceId: 'd_x', name: '基本火能量', supertype: 'energy' }];
+lcP0.hand = [];
+lcP0.deck = [
+  { instanceId: 'fp1', name: '小火龍', supertype: 'pokemon', types: ['Fire'] },
+  { instanceId: 'fp2', name: '超級噴火龍Xex', supertype: 'pokemon', types: ['Fire'] },
+  { instanceId: 'fe1', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'we1', name: '基本水能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Water' }
+];
+const lcRes = lcGame.attack(0, 0, { targetCardIds: ['fp1', 'fp2', 'fe1', 'we1'] });
+assert(lcRes.success, '熔蟻獸使出舔舔捕捉應成功');
+assert.strictEqual(lcP0.hand.length, 3, '舔舔捕捉最多應將 3 張火寶可夢/基本火能量加入手牌');
+assert(!lcP0.hand.some(c => c.instanceId === 'we1'), '不可選取水能量');
+
+// 測試奇跡修正檔
+const mpGame = new PTCGGame(
+  'mp_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const mpP0 = mpGame.players[0];
+mpGame.turnNumber = 2;
+mpGame.activePlayerIndex = 0;
+mpP0.active = { instanceId: 'mp_a', name: '拉魯拉絲', supertype: 'pokemon', types: ['Psychic'], hp: 70, attachedEnergy: [] };
+mpP0.bench = [
+  { instanceId: 'mp_b0', name: '小火龍', supertype: 'pokemon', types: ['Fire'], hp: 80, attachedEnergy: [] },
+  { instanceId: 'mp_b1', name: '超級沙奈朵ex', supertype: 'pokemon', types: ['Psychic'], hp: 360, attachedEnergy: [] }
+];
+mpP0.discard = [
+  { instanceId: 'psy_e1', name: '基本超能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Psychic' }
+];
+mpP0.hand = [
+  { instanceId: 'mp_item', id: 'miracle_patch', name: '奇跡修正檔', supertype: 'trainer', subtypes: ['Item'] }
+];
+const mpFailFire = mpGame.playItem(0, 'mp_item', { benchIndex: 0 });
+assert(!mpFailFire.success, '奇跡修正檔不可附於火屬性備戰寶可夢');
+const mpOk = mpGame.playItem(0, 'mp_item', { benchIndex: 1 });
+assert(mpOk.success, '奇跡修正檔附於超屬性備戰寶可夢應成功');
+assert.strictEqual(mpP0.bench[1].attachedEnergy.length, 1, '備戰區超級沙奈朵ex應成功附加 1 張棄牌區基本超能量');
+assert.strictEqual(mpP0.discard.filter(c => c.instanceId === 'psy_e1').length, 0, '棄牌區該張基本超能量應已移至寶可夢身上');
+console.log('✓ 熔蟻獸「舔舔捕捉」、物品卡「奇跡修正檔」與「火恐龍」HP 110 / 吐火 40 驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

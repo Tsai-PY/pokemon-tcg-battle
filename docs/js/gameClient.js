@@ -178,7 +178,7 @@ function executeP2PAction(g, pIdx, actionType, payload) {
   else if (actionType === 'play_supporter') res = g.playSupporter(pIdx, payload.cardInstanceId, payload.params || payload);
   else if (actionType === 'use_ability') res = g.useAbility(pIdx, payload.params || payload);
   else if (actionType === 'retreat') res = g.retreat(pIdx, payload.benchIndex);
-  else if (actionType === 'attack') res = g.attack(pIdx, payload.attackIndex || 0);
+  else if (actionType === 'attack') res = g.attack(pIdx, payload.attackIndex || 0, payload.params || payload);
   else if (actionType === 'end_turn') { g.nextTurn(); res = { success: true }; }
   return res;
 }
@@ -599,6 +599,23 @@ function inspectCard(card, location, slotIndex = null) {
         } else {
           player.bench.forEach((b, bIdx) => {
             actionsHtml += `<button class="btn btn-primary" onclick="doPlaySwitchCard('${card.instanceId}', ${bIdx})" style="font-weight: 800; background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff;">🔄 與備戰區「${b.name}」互換（免能量・不限次數）</button>`;
+          });
+        }
+      } else if (card.id === 'miracle_patch' || card.name.includes('奇跡修正檔') || card.name.includes('奇蹟修正檔')) {
+        const hasPsychicInDiscard = (player.discard || []).some(c =>
+          c && c.supertype === 'energy' && !(c.subtypes && c.subtypes.includes('Special')) &&
+          (c.energyType === 'Psychic' || (c.name && c.name.includes('超')))
+        );
+        const psychicBench = (player.bench || [])
+          .map((b, idx) => ({ b, idx }))
+          .filter(x => x.b && Array.isArray(x.b.types) && x.b.types.includes('Psychic'));
+        if (!hasPsychicInDiscard) {
+          actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">🔮 奇跡修正檔（棄牌區沒有「基本超能量」）</button>`;
+        } else if (psychicBench.length === 0) {
+          actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">🔮 奇跡修正檔（備戰區沒有【超】屬性寶可夢）</button>`;
+        } else {
+          psychicBench.forEach(({ b, idx }) => {
+            actionsHtml += `<button class="btn btn-primary" onclick="doPlayMiraclePatch('${card.instanceId}', ${idx})" style="font-weight: 800; background: linear-gradient(135deg, #a855f7, #7e22ce); color: #fff;">🔮 從棄牌區附「基本超能量」至備戰區「${b.name}」</button>`;
           });
         }
       } else {
@@ -2083,6 +2100,126 @@ function doPlaySwitchCard(cardInstanceId, benchIndex) {
   sendGameAction('play_item', { cardInstanceId, benchIndex });
 }
 
+function doPlayMiraclePatch(cardInstanceId, benchIndex) {
+  closeCardActionModal();
+  sfx.playCard();
+  sendGameAction('play_item', { cardInstanceId, benchIndex });
+}
+
+// 熔蟻獸 招式【舔舔捕捉】選牌 Modal：從牌庫選擇【火】寶可夢與「基本火能量」合計最多 3 張
+function openLickCatchModal(attackIndex) {
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  const isEligible = (c) =>
+    (c.supertype === 'pokemon' && Array.isArray(c.types) && c.types.includes('Fire')) ||
+    (c.supertype === 'energy' && !(c.subtypes && c.subtypes.includes('Special')) && (c.energyType === 'Fire' || (c.name && c.name.includes('火'))));
+  const candidates = (player.deckCards || []).filter(isEligible);
+
+  searchModalState = {
+    mode: 'lick_catch',
+    cardInstanceId: null,
+    selectedDiscardIds: [],
+    selectedTargetId: null,
+    selectedTargetIds: [],
+    lickCatchAttackIndex: attackIndex
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `👅 熔蟻獸【舔舔捕捉】：選取火寶可夢與基本火能量（合計最多 3 張）`;
+
+  body.innerHTML = `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #fb923c;">請選擇【火】寶可夢或「基本火能量」（合計最多 3 張）</span>
+        <span id="lc-count-badge" style="background: #c2410c; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: bold;">
+          已選擇 0 / 3 張（牌庫共 ${candidates.length} 張）
+        </span>
+      </div>
+      ${candidates.length === 0 ? `
+        <div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; text-align: center;">
+          ⚠️ 牌庫中目前沒有【火】寶可夢或「基本火能量」（確認後將重洗牌庫並結束回合）
+        </div>
+      ` : `
+        <div id="lc-deck-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; padding: 4px;">
+          ${candidates.map(c => `
+            <div class="ub-card-choice lc-item" id="lc-item-${c.instanceId}" onclick="toggleLickCatchTarget('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center;">
+              <div style="height: 95px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">${c.supertype === 'energy' ? '🔥' : '🐾'}</span>`}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+              <div style="font-size: 0.7rem; color: #fb923c;">${c.supertype === 'energy' ? '基本火能量' : `火寶可夢 HP ${c.hp || ''}`}</div>
+              <div class="lc-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #f97316; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">✓ 加入手牌</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+
+  updateLickCatchUI();
+  modal.classList.add('active');
+}
+
+function toggleLickCatchTarget(cId) {
+  const arr = searchModalState.selectedTargetIds;
+  const idx = arr.indexOf(cId);
+  if (idx !== -1) arr.splice(idx, 1);
+  else {
+    if (arr.length >= 3) arr.shift();
+    arr.push(cId);
+  }
+  updateLickCatchUI();
+}
+
+function updateLickCatchUI() {
+  const grid = document.getElementById('lc-deck-grid');
+  if (grid) {
+    grid.querySelectorAll('.lc-item').forEach(el => {
+      const cId = el.id.replace('lc-item-', '');
+      const isSel = searchModalState.selectedTargetIds.includes(cId);
+      el.style.borderColor = isSel ? '#f97316' : '#334155';
+      el.style.background = isSel ? 'rgba(249, 115, 22, 0.2)' : '#0f172a';
+      const b = el.querySelector('.lc-badge');
+      if (b) b.style.display = isSel ? 'block' : 'none';
+    });
+  }
+  const badge = document.getElementById('lc-count-badge');
+  if (badge) {
+    badge.textContent = `已選擇 ${searchModalState.selectedTargetIds.length} / 3 張`;
+  }
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    const cnt = searchModalState.selectedTargetIds.length;
+    confirmBtn.disabled = false;
+    confirmBtn.className = 'btn btn-warning';
+    confirmBtn.style.background = 'linear-gradient(135deg, #f97316, #dc2626)';
+    confirmBtn.style.color = '#fff';
+    confirmBtn.textContent = cnt > 0
+      ? `👅 確認發動【舔舔捕捉】加入 ${cnt} 張手牌並重洗牌庫`
+      : `👅 確認發動【舔舔捕捉】不拿取並重洗牌庫`;
+    confirmBtn.onclick = confirmLickCatchAction;
+  }
+}
+
+function confirmLickCatchAction() {
+  const attackIndex = searchModalState.lickCatchAttackIndex || 0;
+  const targetCardIds = [...searchModalState.selectedTargetIds];
+  const attackBtn = document.getElementById('btn-action-attack');
+  if (attackBtn) {
+    attackBtn.disabled = true;
+    attackBtn.style.opacity = '0.5';
+  }
+  sfx.playAttack();
+  closeCardSelectionModal();
+  sendGameAction('attack', { attackIndex, targetCardIds });
+}
+
 // Attacks Modal
 function openAttackChoiceModal() {
   closeCardActionModal();
@@ -2134,13 +2271,17 @@ function openAttackChoiceModal() {
         <span style="font-weight: 800; color: #dc2626; font-size: 1.1rem;">${at.damage || 0} 點傷害</span>
       `;
       btn.onclick = () => {
+        modal.classList.remove('active');
+        if (at.name === '舔舔捕捉') {
+          openLickCatchModal(idx);
+          return;
+        }
         btn.disabled = true;
         const attackBtn = document.getElementById('btn-action-attack');
         if (attackBtn) {
           attackBtn.disabled = true;
           attackBtn.style.opacity = '0.5';
         }
-        modal.classList.remove('active');
         sfx.playAttack();
         sendGameAction('attack', { attackIndex: idx });
       };

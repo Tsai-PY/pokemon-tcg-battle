@@ -95,7 +95,7 @@ const OFFICIAL_CARD_IMAGES = {
   '小恐龍': 'assets/cards/charmander.png',
 
   // Fire / Charizard line
-  '火恐龍': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/OBF/OBF_025_R_EN_MD.png',
+  '火恐龍': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/002_2f27e33c.png',
   '噴火龍ex': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/OBF/OBF_125_R_EN_MD.png',
   '波波': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/OBF/OBF_162_R_EN_MD.png',
   '比比鳥': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/OBF/OBF_163_R_EN_MD.png',
@@ -221,6 +221,7 @@ const OFFICIAL_CARD_IMAGES = {
   '米立龍': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/009_c3c2a917.png',
   '喵喵ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/010_33bc5d07.png',
   '奇跡修正檔': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/016_98abdec7.png',
+  '奇蹟修正檔': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/016_98abdec7.png',
   '英雄斗篷': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/017_7bb05933.png',
   '鬥子': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/020_8a3a2ab6.png',
   '感應超能量': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/023_e2bb7ce0.png'

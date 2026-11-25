@@ -697,14 +697,14 @@
     name: '火恐龍',
     supertype: 'pokemon',
     subtypes: ['Stage 1'],
-    hp: 90,
+    hp: 110,
     types: ['Fire'],
     evolvesFrom: '小火龍',
     attacks: [
       {
-        name: '火焰爪',
-        cost: ['Fire', 'Fire'],
-        damage: 50,
+        name: '吐火',
+        cost: ['Fire'],
+        damage: 40,
         text: ''
       }
     ],
@@ -3049,6 +3049,34 @@ function findCardByName(rawName) {
         return { success: true };
       }
 
+      const isMiraclePatch = previewItem.id === 'miracle_patch' || (previewItem.name && (previewItem.name.includes('奇跡修正檔') || previewItem.name.includes('奇蹟修正檔')));
+      if (isMiraclePatch) {
+        const isBasicPsychicEnergy = (c) =>
+          c && c.supertype === 'energy' &&
+          !(c.subtypes && c.subtypes.includes('Special')) &&
+          (c.energyType === 'Psychic' || (c.name && c.name.includes('超')));
+        const energyDiscardIdx = (params && params.energyCardId)
+          ? p.discard.findIndex(c => c.instanceId === params.energyCardId && isBasicPsychicEnergy(c))
+          : p.discard.findIndex(isBasicPsychicEnergy);
+        if (energyDiscardIdx === -1) {
+          return { success: false, message: '棄牌區中沒有「基本超能量」卡，無法使用奇跡修正檔！' };
+        }
+        const bIdx = (params && typeof params.benchIndex === 'number')
+          ? params.benchIndex
+          : p.bench.findIndex(b => b && Array.isArray(b.types) && b.types.includes('Psychic'));
+        const target = p.bench[bIdx];
+        if (!target || !Array.isArray(target.types) || !target.types.includes('Psychic')) {
+          return { success: false, message: '備戰區中沒有【超】屬性寶可夢，無法使用奇跡修正檔！' };
+        }
+        const item = p.hand.splice(idx, 1)[0];
+        p.discard.push(item);
+        const pickedEnergy = p.discard.splice(energyDiscardIdx, 1)[0];
+        if (!Array.isArray(target.attachedEnergy)) target.attachedEnergy = [];
+        target.attachedEnergy.push(pickedEnergy);
+        this.log(`🔮「${item.name}」：${p.name} 從棄牌區選擇 1 張「${pickedEnergy.name}」，附於備戰區的超寶可夢「${target.name}」身上（目前已有 ${target.attachedEnergy.length} 個能量）！`);
+        return { success: true };
+      }
+
       const isRareCandy = previewItem.id === 'rare_candy' || previewItem.effect === 'rare_candy_evolve' || (previewItem.name && previewItem.name.includes('神奇糖果'));
       if (isRareCandy) {
         if (this.turnNumber <= 2) {
@@ -3441,7 +3469,7 @@ function findCardByName(rawName) {
       return { success: true };
     }
 
-    attack(pIdx, attackIdx = 0) {
+    attack(pIdx, attackIdx = 0, params = {}) {
       if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
       if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
       const p = this.players[pIdx];
@@ -3522,6 +3550,37 @@ function findCardByName(rawName) {
       if (at.name === '奇蹟之力' && Array.isArray(p.active.statusConditions) && p.active.statusConditions.length > 0) {
         p.active.statusConditions = [];
         this.log(`✨「奇蹟之力」：解除了「${p.active.name}」身上的所有特殊狀態！`);
+      }
+      if (at.name === '舔舔捕捉') {
+        const isFirePokemonOrBasicFireEnergy = (c) =>
+          (c.supertype === 'pokemon' && Array.isArray(c.types) && c.types.includes('Fire')) ||
+          (c.supertype === 'energy' && !(c.subtypes && c.subtypes.includes('Special')) && (c.energyType === 'Fire' || (c.name && c.name.includes('火'))));
+        const targetIds = (params && Array.isArray(params.targetCardIds)) ? params.targetCardIds.slice(0, 3) : [];
+        const addedNames = [];
+        if (targetIds.length > 0) {
+          targetIds.forEach(tId => {
+            const tIdx = p.deck.findIndex(c => c.instanceId === tId && isFirePokemonOrBasicFireEnergy(c));
+            if (tIdx !== -1) {
+              const card = p.deck.splice(tIdx, 1)[0];
+              p.hand.push(card);
+              addedNames.push(card.name);
+            }
+          });
+        } else if (!params || !Array.isArray(params.targetCardIds)) {
+          for (let k = 0; k < 3; k++) {
+            const autoIdx = p.deck.findIndex(isFirePokemonOrBasicFireEnergy);
+            if (autoIdx === -1) break;
+            const card = p.deck.splice(autoIdx, 1)[0];
+            p.hand.push(card);
+            addedNames.push(card.name);
+          }
+        }
+        p.deck = this._shuffle(p.deck);
+        if (addedNames.length > 0) {
+          this.log(`👅「舔舔捕捉」：${p.name} 從牌庫選擇了「${addedNames.join('」、「')}」給對手看過後加入手牌，並重洗牌庫！`);
+        } else {
+          this.log(`👅「舔舔捕捉」：${p.name} 檢索牌庫後未加入卡牌，並重洗牌庫。`);
+        }
       }
 
       if (opp.active) {
@@ -3869,7 +3928,7 @@ function findCardByName(rawName) {
       else if (body.action === 'play_supporter') res = g.playSupporter(pIdx, body.cardInstanceId, body.params || body);
       else if (body.action === 'use_ability') res = g.useAbility(pIdx, body.params || body);
       else if (body.action === 'retreat') res = g.retreat(pIdx, body.benchIndex);
-      else if (body.action === 'attack') res = g.attack(pIdx, body.attackIndex || 0);
+      else if (body.action === 'attack') res = g.attack(pIdx, body.attackIndex || 0, body.params || body);
       else if (body.action === 'end_turn') { g.nextTurn(); res = { success: true }; }
 
       return new Response(JSON.stringify({ success: res.success, message: res.message, state: g.getState(pIdx) }), { status: res.success ? 200 : 400 });
