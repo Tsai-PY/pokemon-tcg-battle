@@ -554,6 +554,45 @@ assert(lildRes.success, '使用莉莉艾的決意應成功');
 assert.strictEqual(lP0.hand.length, 8, '剩餘 6 張獎賞卡時使用莉莉艾的決意應抽出 8 張');
 console.log('✓ 「莉莉艾」與「莉莉艾的決意」抽牌與條件規則驗證全數通過！');
 
+console.log('\n[Test 16] 測試花舞鳥ex特性【激動渦輪】（場上有火屬性超級進化寶可夢ex時，可不限次數附基本火能量至備戰區火寶可夢）...');
+const etGame = new PTCGGame(
+  'et_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const etP0 = etGame.players[0];
+etGame.turnNumber = 3;
+etGame.activePlayerIndex = 0;
+etP0.active = { instanceId: 'et_ori', id: 'oricorio_ex', name: '花舞鳥ex', supertype: 'pokemon', subtypes: ['Basic', 'ex'], types: ['Fire'], hp: 190, attachedEnergy: [] };
+etP0.bench = [
+  { instanceId: 'et_ch', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'], types: ['Fire'], hp: 80, attachedEnergy: [] },
+  { instanceId: 'et_fez', id: 'fezandipiti_ex', name: '吉雉雞ex', supertype: 'pokemon', subtypes: ['Basic', 'ex'], types: ['Darkness'], hp: 210, attachedEnergy: [] }
+];
+etP0.hand = [
+  { instanceId: 'et_f1', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'et_f2', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' }
+];
+
+// 1. 場上沒有火屬性超級進化寶可夢ex時不可發動
+const etNoMega = etGame.useAbility(0, { abilityId: 'excited_turbo', energyCardId: 'et_f1', benchIndex: 0 });
+assert(!etNoMega.success, '場上沒有火屬性超級進化寶可夢ex時應禁止發動激動渦輪');
+
+// 2. 將戰鬥場換成超級噴火龍Xex、備戰區放花舞鳥ex
+etP0.active = { instanceId: 'et_mega', id: 'mega_charizard_x_ex', name: '超級噴火龍Xex', supertype: 'pokemon', subtypes: ['Stage 2', 'ex'], types: ['Fire'], hp: 360, isEx: true, attachedEnergy: [] };
+etP0.bench.push({ instanceId: 'et_ori2', id: 'oricorio_ex', name: '花舞鳥ex', supertype: 'pokemon', subtypes: ['Basic', 'ex'], types: ['Fire'], hp: 190, attachedEnergy: [] });
+
+// 3. 不可附於非火屬性的備戰寶可夢（吉雉雞ex）
+const etNonFire = etGame.useAbility(0, { abilityId: 'excited_turbo', energyCardId: 'et_f1', benchIndex: 1 });
+assert(!etNonFire.success, '激動渦輪不可附於非火屬性備戰寶可夢');
+
+// 4. 即使當回合已手動貼過能量（energyAttached = true），仍可連續 2 次發動激動渦輪附於備戰區小火龍
+etP0.turnFlags.energyAttached = true;
+const etOk1 = etGame.useAbility(0, { abilityId: 'excited_turbo', energyCardId: 'et_f1', benchIndex: 0 });
+const etOk2 = etGame.useAbility(0, { abilityId: 'excited_turbo', energyCardId: 'et_f2', benchIndex: 0 });
+assert(etOk1.success && etOk2.success, '場上有超級噴火龍Xex與花舞鳥ex時，激動渦輪應可不限次數連續發動');
+assert.strictEqual(etP0.bench[0].attachedEnergy.length, 2, '備戰區小火龍應成功附加 2 個基本火能量');
+console.log('✓ 花舞鳥ex特性【激動渦輪】條件檢核與不限次數貼能驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

@@ -176,6 +176,7 @@ function executeP2PAction(g, pIdx, actionType, payload) {
   else if (actionType === 'evolve') res = g.evolve(pIdx, payload.cardInstanceId, payload.targetSlot);
   else if (actionType === 'play_item') res = g.playItem(pIdx, payload.cardInstanceId, payload.params || payload);
   else if (actionType === 'play_supporter') res = g.playSupporter(pIdx, payload.cardInstanceId, payload.params || payload);
+  else if (actionType === 'use_ability') res = g.useAbility(pIdx, payload.params || payload);
   else if (actionType === 'retreat') res = g.retreat(pIdx, payload.benchIndex);
   else if (actionType === 'attack') res = g.attack(pIdx, payload.attackIndex || 0);
   else if (actionType === 'end_turn') { g.nextTurn(); res = { success: true }; }
@@ -537,6 +538,15 @@ function inspectCard(card, location, slotIndex = null) {
       });
     }
 
+    // 3b. 花舞鳥ex 特性【激動渦輪】：若場上有花舞鳥ex與火屬性超級進化寶可夢ex，手牌基本火能量可直接附於備戰區火寶可夢（不限次數）
+    const isBasicFireCard = card.supertype === 'energy' && !(card.subtypes && card.subtypes.includes('Special')) && (card.energyType === 'Fire' || (card.name && card.name.includes('火')));
+    if (isBasicFireCard && canUseExcitedTurbo(player)) {
+      const fireBench = (player.bench || []).map((b, idx) => ({ b, idx })).filter(x => x.b && Array.isArray(x.b.types) && x.b.types.includes('Fire'));
+      fireBench.forEach(({ b, idx }) => {
+        actionsHtml += `<button class="btn btn-warning" onclick="doUseExcitedTurbo('${card.instanceId}', ${idx})" style="font-weight: 800; background: linear-gradient(135deg, #f97316, #dc2626); color: #fff;">🔥【激動渦輪】附於備戰區火寶可夢「${b.name}」（不限次數）</button>`;
+      });
+    }
+
     // 4. Attach Tool
     const isToolCard = (card.supertype === 'trainer' && card.subtypes && card.subtypes.includes('Tool')) ||
                        card.supertype === 'tool' ||
@@ -625,6 +635,18 @@ function inspectCard(card, location, slotIndex = null) {
     }
     if (!player.turnFlags.retreated && !(player.turnFlags && player.turnFlags.attacked) && player.bench.length > 0 && !selfImmobilized) {
       actionsHtml += `<button class="btn btn-secondary" onclick="openRetreatChoiceModal()">🏃 撤退至備戰區</button>`;
+    }
+  }
+
+  // 場上（戰鬥場或備戰區）點擊花舞鳥ex：顯示【特性：激動渦輪】發動按鈕
+  if ((location === 'self_active' || location === 'self_bench') && isMyTurn && currentGameState.status !== 'finished') {
+    const isOricorio = card.id === 'oricorio_ex' || (card.name && card.name.includes('花舞鳥ex')) || (card.ability && card.ability.name === '激動渦輪');
+    if (isOricorio) {
+      if (canUseExcitedTurbo(player)) {
+        actionsHtml += `<button class="btn btn-warning" onclick="openExcitedTurboModal()" style="font-weight: 800; background: linear-gradient(135deg, #f97316, #dc2626); color: #fff; box-shadow: 0 0 12px rgba(249, 115, 22, 0.5);">🔥 發動特性【激動渦輪】（從手牌貼基本火能量至備戰區火寶可夢・不限次數）</button>`;
+      } else {
+        actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.65; cursor: not-allowed;">🔥 特性【激動渦輪】（場上需有火屬性「超級進化寶可夢ex」才可發動）</button>`;
+      }
     }
   }
 
@@ -1618,6 +1640,163 @@ function confirmRareCandyAction() {
   sfx.playCard();
   closeCardSelectionModal();
   sendGameAction('play_item', payload);
+}
+
+// ================= 花舞鳥ex 特性【激動渦輪】=================
+function canUseExcitedTurbo(player) {
+  if (!player) return false;
+  const field = [player.active, ...(player.bench || [])].filter(Boolean);
+  const hasOricorio = field.some(c =>
+    c.id === 'oricorio_ex' ||
+    (c.name && c.name.includes('花舞鳥ex')) ||
+    (c.ability && c.ability.name === '激動渦輪')
+  );
+  if (!hasOricorio) return false;
+  const hasFireMegaEx = field.some(c =>
+    Array.isArray(c.types) && c.types.includes('Fire') &&
+    ((c.name && c.name.includes('超級')) || (c.id && c.id.includes('mega_'))) &&
+    (c.isEx || (Array.isArray(c.subtypes) && c.subtypes.includes('ex')) || (c.name && /ex$/i.test(c.name)))
+  );
+  return hasFireMegaEx;
+}
+
+function doUseExcitedTurbo(energyCardId, benchIndex) {
+  closeCardActionModal();
+  sfx.playCard();
+  sendGameAction('use_ability', { abilityId: 'excited_turbo', energyCardId, benchIndex });
+}
+
+function openExcitedTurboModal() {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player || !canUseExcitedTurbo(player)) {
+    alert('⚠️ 發動條件未滿足：自己的場上必須同時有「花舞鳥ex」與【火】屬性的「超級進化寶可夢ex」！');
+    return;
+  }
+
+  const fireEnergiesInHand = (player.hand || []).filter(c =>
+    c.supertype === 'energy' &&
+    !(c.subtypes && c.subtypes.includes('Special')) &&
+    (c.energyType === 'Fire' || (c.name && c.name.includes('火')))
+  );
+  const fireBench = (player.bench || [])
+    .map((b, idx) => ({ b, idx }))
+    .filter(x => x.b && Array.isArray(x.b.types) && x.b.types.includes('Fire'));
+
+  if (fireEnergiesInHand.length === 0) {
+    alert('⚠️ 您的手牌中目前沒有「基本火能量」卡可附加！');
+    return;
+  }
+  if (fireBench.length === 0) {
+    alert('⚠️ 您的備戰區目前沒有【火】屬性寶可夢可附加能量！');
+    return;
+  }
+
+  searchModalState = {
+    mode: 'excited_turbo',
+    cardInstanceId: null,
+    selectedDiscardIds: [],
+    selectedTargetId: null,
+    selectedTargetIds: [],
+    turboEnergyId: fireEnergiesInHand[0].instanceId,
+    turboBenchIdx: fireBench.length === 1 ? fireBench[0].idx : null
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `🔥 特性【激動渦輪】：附「基本火能量」至備戰區火寶可夢`;
+
+  body.innerHTML = `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="font-weight: 800; font-size: 1rem; color: #fb923c; margin-bottom: 10px;">
+        ① 選擇手牌中 1 張「基本火能量」（手牌共 ${fireEnergiesInHand.length} 張）
+      </div>
+      <div id="et-energy-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; max-height: 170px; overflow-y: auto;">
+        ${fireEnergiesInHand.map(c => `
+          <div class="ub-card-choice et-en-item" id="et-en-${c.instanceId}" onclick="selectExcitedTurboEnergy('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center;">
+            <div style="height: 80px; display: flex; align-items: center; justify-content: center; background: #1e293b; border-radius: 6px; margin-bottom: 4px;">
+              ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 1.8rem;">🔥</span>`}
+            </div>
+            <div style="font-size: 0.78rem; font-weight: bold; color: #f8fafc;">${c.name}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="font-weight: 800; font-size: 1rem; color: #34d399; margin-bottom: 10px;">
+        ② 選擇備戰區的【火】屬性寶可夢
+      </div>
+      <div id="et-bench-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;">
+        ${fireBench.map(({ b, idx }) => `
+          <div class="ub-card-choice et-bench-item" id="et-bench-${idx}" onclick="selectExcitedTurboBench(${idx})" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 8px; text-align: center;">
+            <div style="font-size: 0.72rem; color: #fb923c;">備戰區 ${idx + 1}</div>
+            <div style="font-size: 0.88rem; font-weight: bold; color: #f8fafc; margin-top: 2px;">${b.name}</div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">目前能量：${(b.attachedEnergy || []).length} 個</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  updateExcitedTurboUI();
+  modal.classList.add('active');
+}
+
+function selectExcitedTurboEnergy(cId) {
+  searchModalState.turboEnergyId = cId;
+  updateExcitedTurboUI();
+}
+
+function selectExcitedTurboBench(idx) {
+  searchModalState.turboBenchIdx = idx;
+  updateExcitedTurboUI();
+}
+
+function updateExcitedTurboUI() {
+  const enGrid = document.getElementById('et-energy-grid');
+  if (enGrid) {
+    enGrid.querySelectorAll('.et-en-item').forEach(el => {
+      const cId = el.id.replace('et-en-', '');
+      const isSel = searchModalState.turboEnergyId === cId;
+      el.style.borderColor = isSel ? '#f97316' : '#334155';
+      el.style.background = isSel ? 'rgba(249, 115, 22, 0.2)' : '#0f172a';
+    });
+  }
+  const bGrid = document.getElementById('et-bench-grid');
+  if (bGrid) {
+    bGrid.querySelectorAll('.et-bench-item').forEach(el => {
+      const idx = parseInt(el.id.replace('et-bench-', ''), 10);
+      const isSel = searchModalState.turboBenchIdx === idx;
+      el.style.borderColor = isSel ? '#10b981' : '#334155';
+      el.style.background = isSel ? 'rgba(16, 185, 129, 0.2)' : '#0f172a';
+    });
+  }
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    const ready = Boolean(searchModalState.turboEnergyId) && (typeof searchModalState.turboBenchIdx === 'number');
+    confirmBtn.disabled = !ready;
+    confirmBtn.className = ready ? 'btn btn-warning' : 'btn btn-secondary';
+    confirmBtn.style.background = ready ? 'linear-gradient(135deg, #f97316, #dc2626)' : '#475569';
+    confirmBtn.style.color = '#fff';
+    confirmBtn.textContent = ready ? '🔥 確認發動【激動渦輪】附加基本火能量' : '請選擇基本火能量與備戰區火寶可夢';
+    confirmBtn.onclick = ready ? confirmExcitedTurboAction : null;
+  }
+}
+
+function confirmExcitedTurboAction() {
+  const payload = {
+    abilityId: 'excited_turbo',
+    energyCardId: searchModalState.turboEnergyId,
+    benchIndex: searchModalState.turboBenchIdx
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('use_ability', payload);
 }
 
 function doPlaySupporter(cardInstanceId) {

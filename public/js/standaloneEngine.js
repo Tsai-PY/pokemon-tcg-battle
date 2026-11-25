@@ -2906,6 +2906,57 @@ function findCardByName(rawName) {
       return { success: true };
     }
 
+    useAbility(pIdx, params = {}) {
+      if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
+      if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
+      const p = this.players[pIdx];
+      const abilityId = params && params.abilityId;
+
+      if (abilityId === 'excited_turbo' || (params && params.abilityName === '激動渦輪')) {
+        const myField = [p.active, ...(p.bench || [])].filter(Boolean);
+        const hasOricorio = myField.some(c =>
+          c.id === 'oricorio_ex' ||
+          (c.name && c.name.includes('花舞鳥ex')) ||
+          (c.ability && c.ability.name === '激動渦輪')
+        );
+        if (!hasOricorio) {
+          return { success: false, message: '您的場上沒有「花舞鳥ex」，無法發動特性【激動渦輪】！' };
+        }
+        const isFireMegaEx = (c) =>
+          c &&
+          Array.isArray(c.types) && c.types.includes('Fire') &&
+          ((c.name && c.name.includes('超級')) || (c.id && c.id.includes('mega_'))) &&
+          (c.isEx || (Array.isArray(c.subtypes) && c.subtypes.includes('ex')) || (c.name && /ex$/i.test(c.name)));
+        if (!myField.some(isFireMegaEx)) {
+          return { success: false, message: '發動【激動渦輪】的條件未滿足：自己的場上必須有【火】屬性的「超級進化寶可夢ex」（例如超級噴火龍Xex）！' };
+        }
+        const energyIdx = p.hand.findIndex(c =>
+          c.instanceId === params.energyCardId &&
+          c.supertype === 'energy' &&
+          !(c.subtypes && c.subtypes.includes('Special')) &&
+          (c.energyType === 'Fire' || (c.name && c.name.includes('火')))
+        );
+        if (energyIdx === -1) {
+          return { success: false, message: '手牌中找不到指定的「基本火能量」卡！' };
+        }
+        const benchIdx = typeof params.benchIndex === 'number' ? params.benchIndex : parseInt(params.benchIndex, 10);
+        const target = p.bench[benchIdx];
+        if (!target) {
+          return { success: false, message: '找不到目標備戰寶可夢（【激動渦輪】僅能附於備戰區的火寶可夢身上）！' };
+        }
+        if (!Array.isArray(target.types) || !target.types.includes('Fire')) {
+          return { success: false, message: `「${target.name}」不是【火】屬性寶可夢，無法使用【激動渦輪】附能！` };
+        }
+        const energyCard = p.hand.splice(energyIdx, 1)[0];
+        if (!Array.isArray(target.attachedEnergy)) target.attachedEnergy = [];
+        target.attachedEnergy.push(energyCard);
+        this.log(`🔥【特性：激動渦輪】${p.name} 發動「花舞鳥ex」的特性，將手牌的「${energyCard.name}」附於備戰區火寶可夢「${target.name}」身上（目前已有 ${target.attachedEnergy.length} 個能量）！`);
+        return { success: true };
+      }
+
+      return { success: false, message: '未知的寶可夢特性！' };
+    }
+
     attachTool(pIdx, cardId, targetSlot) {
       if (this.status === 'finished') return { success: false, message: '對戰已結束！' };
       if (this.activePlayerIndex !== pIdx) return { success: false, message: '非您的回合！' };
@@ -3797,6 +3848,7 @@ function findCardByName(rawName) {
       else if (body.action === 'evolve') res = g.evolve(pIdx, body.cardInstanceId, body.targetSlot);
       else if (body.action === 'play_item') res = g.playItem(pIdx, body.cardInstanceId, body.params || body);
       else if (body.action === 'play_supporter') res = g.playSupporter(pIdx, body.cardInstanceId, body.params || body);
+      else if (body.action === 'use_ability') res = g.useAbility(pIdx, body.params || body);
       else if (body.action === 'retreat') res = g.retreat(pIdx, body.benchIndex);
       else if (body.action === 'attack') res = g.attack(pIdx, body.attackIndex || 0);
       else if (body.action === 'end_turn') { g.nextTurn(); res = { success: true }; }

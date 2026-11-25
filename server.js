@@ -372,7 +372,10 @@ const server = http.createServer(async (req, res) => {
         actionRes = game.playItem(pIdx, body.cardInstanceId, body.params || body);
         break;
       case 'play_supporter':
-        actionRes = game.playSupporter(pIdx, body.cardInstanceId, body.params);
+        actionRes = game.playSupporter(pIdx, body.cardInstanceId, body.params || body);
+        break;
+      case 'use_ability':
+        actionRes = game.useAbility(pIdx, body.params || body);
         break;
       case 'retreat':
         actionRes = game.retreatActive(pIdx, body.benchIndex);
@@ -505,7 +508,10 @@ wss.on('connection', (ws) => {
             actionRes = game.playItem(pIdx, payload.cardInstanceId, payload.params || payload);
             break;
           case 'play_supporter':
-            actionRes = game.playSupporter(pIdx, payload.cardInstanceId, payload.params);
+            actionRes = game.playSupporter(pIdx, payload.cardInstanceId, payload.params || payload);
+            break;
+          case 'use_ability':
+            actionRes = game.useAbility(pIdx, payload.params || payload);
             break;
           case 'retreat':
             actionRes = game.retreatActive(pIdx, payload.benchIndex);
