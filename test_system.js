@@ -593,6 +593,43 @@ assert(etOk1.success && etOk2.success, '場上有超級噴火龍Xex與花舞鳥e
 assert.strictEqual(etP0.bench[0].attachedEnergy.length, 2, '備戰區小火龍應成功附加 2 個基本火能量');
 console.log('✓ 花舞鳥ex特性【激動渦輪】條件檢核與不限次數貼能驗證全數通過！');
 
+console.log('\n[Test 17] 測試物品卡「寶可夢交替」（指定備戰寶可夢互換、免撤退能量、解除異常狀態且同回合不限張數）...');
+const swGame = new PTCGGame(
+  'sw_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const swP0 = swGame.players[0];
+swGame.turnNumber = 2;
+swGame.activePlayerIndex = 0;
+swP0.active = { instanceId: 'sw_a', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'], hp: 80, statusConditions: ['paralyzed'], attachedEnergy: [] };
+swP0.bench = [];
+swP0.hand = [
+  { instanceId: 'sw_1', id: 'switch_card', name: '寶可夢交替', supertype: 'trainer', subtypes: ['Item'], effect: 'switch_active_bench' },
+  { instanceId: 'sw_2', id: 'switch_card', name: '寶可夢交替', supertype: 'trainer', subtypes: ['Item'], effect: 'switch_active_bench' }
+];
+// 1. 備戰區無寶可夢時不可使用且保留手牌
+const swEmptyFail = swGame.playItem(0, 'sw_1', { benchIndex: 0 });
+assert(!swEmptyFail.success, '備戰區沒有寶可夢時應不可使用寶可夢交替');
+assert.strictEqual(swP0.hand.length, 2, '使用失敗時寶可夢交替應保留於手牌中');
+
+// 2. 放入 2 隻備戰寶可夢，將戰鬥場（麻痺且無能量）與備戰區第 2 隻（index 1）互換
+swP0.bench = [
+  { instanceId: 'sw_b0', name: '比克提尼', supertype: 'pokemon', subtypes: ['Basic'], hp: 80, attachedEnergy: [] },
+  { instanceId: 'sw_b1', name: '花舞鳥ex', supertype: 'pokemon', subtypes: ['Basic', 'ex'], hp: 190, attachedEnergy: [] }
+];
+const swOk1 = swGame.playItem(0, 'sw_1', { benchIndex: 1 });
+assert(swOk1.success, '即使戰鬥場麻痺且無能量，使用寶可夢交替應成功');
+assert.strictEqual(swP0.active.name, '花舞鳥ex', '戰鬥場應已更換為指定的備戰寶可夢花舞鳥ex');
+assert.strictEqual(swP0.bench[1].name, '小火龍', '原本戰鬥場的小火龍應退回備戰區索引 1');
+assert.strictEqual(swP0.bench[1].statusConditions.length, 0, '退回備戰區後原麻痺狀態應清除');
+
+// 3. 同回合再次使用第 2 張寶可夢交替換上比克提尼（驗證不限張數）
+const swOk2 = swGame.playItem(0, 'sw_2', { benchIndex: 0 });
+assert(swOk2.success, '同一回合應可再次使用第 2 張寶可夢交替');
+assert.strictEqual(swP0.active.name, '比克提尼', '戰鬥場應已更換為比克提尼');
+console.log('✓ 「寶可夢交替」指定互換、解除異常狀態與同回合不限張數驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

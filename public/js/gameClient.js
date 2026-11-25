@@ -593,6 +593,14 @@ function inspectCard(card, location, slotIndex = null) {
         } else {
           actionsHtml += `<button class="btn btn-primary" onclick="openRareCandyModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);">🍬 使用神奇糖果（跳過 1 階直接進化為 2 階寶可夢）</button>`;
         }
+      } else if (card.id === 'switch_card' || card.effect === 'switch_active_bench' || card.name.includes('交替') || card.name.includes('寶可夢交換')) {
+        if (!player.bench || player.bench.length === 0) {
+          actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">🔄 寶可夢交替（備戰區無寶可夢可互換）</button>`;
+        } else {
+          player.bench.forEach((b, bIdx) => {
+            actionsHtml += `<button class="btn btn-primary" onclick="doPlaySwitchCard('${card.instanceId}', ${bIdx})" style="font-weight: 800; background: linear-gradient(135deg, #14b8a6, #0d9488); color: #fff;">🔄 與備戰區「${b.name}」互換（免能量・不限次數）</button>`;
+          });
+        }
       } else {
         actionsHtml += `<button class="btn btn-primary" onclick="doPlayItem('${card.instanceId}')">🎒 使用此物品卡</button>`;
       }
@@ -2067,6 +2075,12 @@ function doPlayBossOrders(cardInstanceId, oppBenchIndex) {
   closeCardActionModal();
   sfx.playCard();
   sendGameAction('play_supporter', { cardInstanceId, oppBenchIndex });
+}
+
+function doPlaySwitchCard(cardInstanceId, benchIndex) {
+  closeCardActionModal();
+  sfx.playCard();
+  sendGameAction('play_item', { cardInstanceId, benchIndex });
 }
 
 // Attacks Modal

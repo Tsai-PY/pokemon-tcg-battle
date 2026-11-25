@@ -3030,6 +3030,25 @@ function findCardByName(rawName) {
         return { success: false, message: '使用「大地之器」必須將 1 張其他手牌丟棄到棄牌區，目前沒有其他手牌可丟棄！' };
       }
 
+      const isSwitchCard = previewItem.id === 'switch_card' || previewItem.effect === 'switch_active_bench' || (previewItem.name && (previewItem.name.includes('交替') || previewItem.name.includes('寶可夢交換')));
+      if (isSwitchCard) {
+        if (!p.active) {
+          return { success: false, message: '戰鬥場上沒有寶可夢可互換！' };
+        }
+        if (!p.bench || p.bench.length === 0) {
+          return { success: false, message: '備戰區沒有寶可夢可互換！' };
+        }
+        const bIdx = (params && typeof params.benchIndex === 'number' && p.bench[params.benchIndex]) ? params.benchIndex : 0;
+        const item = p.hand.splice(idx, 1)[0];
+        p.discard.push(item);
+        const oldActive = p.active;
+        oldActive.statusConditions = [];
+        p.active = p.bench[bIdx];
+        p.bench[bIdx] = oldActive;
+        this.log(`🔄「${item.name}」：${p.name} 將戰鬥場的「${oldActive.name}」與備戰區的「${p.active.name}」互換！`);
+        return { success: true };
+      }
+
       const isRareCandy = previewItem.id === 'rare_candy' || previewItem.effect === 'rare_candy_evolve' || (previewItem.name && previewItem.name.includes('神奇糖果'));
       if (isRareCandy) {
         if (this.turnNumber <= 2) {
