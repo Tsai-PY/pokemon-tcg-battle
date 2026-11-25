@@ -695,6 +695,51 @@ assert.strictEqual(mpP0.bench[1].attachedEnergy.length, 1, '備戰區超級沙�
 assert.strictEqual(mpP0.discard.filter(c => c.instanceId === 'psy_e1').length, 0, '棄牌區該張基本超能量應已移至寶可夢身上');
 console.log('✓ 熔蟻獸「舔舔捕捉」、物品卡「奇跡修正檔」與「火恐龍」HP 110 / 吐火 40 驗證全數通過！');
 
+console.log('\n[Test 19] 測試寶可夢道具卡「氣球」（撤退所需能量減少 2 個、每隻限貼 1 張）...');
+const abGame = new PTCGGame(
+  'ab_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const abP0 = abGame.players[0];
+abGame.turnNumber = 2;
+abGame.activePlayerIndex = 0;
+abP0.active = {
+  instanceId: 'ab_char', id: 'mega_charizard_x_ex', name: '超級噴火龍Xex',
+  supertype: 'pokemon', subtypes: ['Stage 2', 'ex'], hp: 360, retreatCost: 2, attachedEnergy: []
+};
+abP0.bench = [
+  { instanceId: 'ab_jel', id: 'jellicent_ex', name: '胖嘟嘟ex', supertype: 'pokemon', subtypes: ['Stage 1', 'ex'], hp: 270, retreatCost: 3, attachedEnergy: [{ instanceId: 'ab_e1', name: '基本超能量', supertype: 'energy', energyType: 'Psychic' }] }
+];
+abP0.hand = [
+  { instanceId: 'ab_t1', id: 'air_balloon', name: '氣球', supertype: 'trainer', subtypes: ['Tool'] },
+  { instanceId: 'ab_t2', id: 'air_balloon', name: '氣球', supertype: 'trainer', subtypes: ['Tool'] }
+];
+
+// 1. 貼氣球前，超級噴火龍Xex 撤退需 2 能量，0 能量不可撤退
+const abFailBefore = abGame.retreatActive(0, 0);
+assert(!abFailBefore.success, '貼氣球前 0 能量不應允許撤退');
+
+// 2. 貼上氣球（每隻寶可夢限貼 1 張）
+const abAttach1 = abGame.attachTool(0, 'ab_t1', 'active');
+assert(abAttach1.success, '將氣球貼附於超級噴火龍Xex應成功');
+const abDupFail = abGame.attachTool(0, 'ab_t2', 'active');
+assert(!abDupFail.success, '同一隻寶可夢不可重複貼附第 2 張道具卡');
+
+// 3. 貼上氣球後撤退需求由 2 降為 0，0 能量即可撤退
+const abRetreat0 = abGame.retreatActive(0, 0);
+assert(abRetreat0.success, '貼附氣球後撤退所需能量減 2，0 能量即可成功撤退');
+assert.strictEqual(abP0.active.name, '胖嘟嘟ex', '應已將胖嘟嘟ex換上戰鬥場');
+
+// 4. 胖嘟嘟ex 撤退需 3 能量，貼附氣球後降為 1 能量，身上 1 能量即可撤退
+abP0.turnFlags.retreated = false;
+const abAttach2 = abGame.attachTool(0, 'ab_t2', 'active');
+assert(abAttach2.success, '將第 2 張氣球貼附於胖嘟嘟ex應成功（物品道具不限張數）');
+const abRetreat1 = abGame.retreatActive(0, 0);
+assert(abRetreat1.success, '胖嘟嘟ex 貼氣球後撤退只需 1 能量，應成功撤退');
+assert.strictEqual(abP0.bench[0].attachedEnergy.length, 0, '胖嘟嘟ex 應僅棄掉 1 個撤退能量');
+console.log('✓ 「氣球」撤退能量 -2、0 能量免費撤退與 3→1 撤退驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

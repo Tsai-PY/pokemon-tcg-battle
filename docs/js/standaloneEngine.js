@@ -2966,7 +2966,7 @@ function findCardByName(rawName) {
       const toolCard = p.hand[idx];
       const isTool = (toolCard.subtypes && toolCard.subtypes.includes('Tool')) ||
                      toolCard.supertype === 'tool' ||
-                     (toolCard.name && (toolCard.name.includes('護符') || toolCard.name.includes('鈴鐺響') || toolCard.name.includes('演進') || toolCard.name.includes('道具')));
+                     (toolCard.name && (toolCard.name.includes('護符') || toolCard.name.includes('鈴鐺響') || toolCard.name.includes('演進') || toolCard.name.includes('氣球') || toolCard.name.includes('斗篷') || toolCard.name.includes('道具')));
       if (!isTool) return { success: false, message: '該卡牌不是寶可夢道具卡！' };
 
       const target = targetSlot === 'active' ? p.active : p.bench[targetSlot];
@@ -2980,6 +2980,13 @@ function findCardByName(rawName) {
       if ((toolCard.id === 'bravery_charm' || (toolCard.name && toolCard.name.includes('勇氣護符'))) && isBasic) {
         target.maxHpBonus = (target.maxHpBonus || 0) + 50;
         this.log(`🛡️「勇氣護符」生效！基礎寶可夢「${target.name}」的最大 HP 提升 50！`);
+      } else if (toolCard.id === 'heros_cape' || (toolCard.name && toolCard.name.includes('英雄斗篷'))) {
+        target.maxHpBonus = (target.maxHpBonus || 0) + 100;
+        this.log(`🦸「英雄斗篷」生效！「${target.name}」的最大 HP 提升 100！`);
+      } else if (toolCard.id === 'air_balloon' || (toolCard.name && toolCard.name.includes('氣球'))) {
+        const baseCost = typeof target.retreatCost === 'number' ? target.retreatCost : 1;
+        const newCost = Math.max(0, baseCost - 2);
+        this.log(`🎈「氣球」生效！「${target.name}」撤退所需的能量減少 2 個（目前撤退需求：${newCost} 個能量）！`);
       }
 
       this.log(`${p.name} 為「${target.name}」貼上了寶可夢道具「${toolCard.name}」。`);
@@ -3457,9 +3464,15 @@ function findCardByName(rawName) {
       const st = p.active.statusConditions || [];
       if (st.includes('paralyzed')) return { success: false, message: `「${p.active.name}」處於⚡麻痺狀態，無法撤退！` };
       if (st.includes('asleep')) return { success: false, message: `「${p.active.name}」處於💤睡眠狀態，無法撤退！` };
-      const cost = p.active.retreatCost || 1;
+      let cost = typeof p.active.retreatCost === 'number' ? p.active.retreatCost : 1;
+      if (p.active.attachedTool && (p.active.attachedTool.id === 'air_balloon' || (p.active.attachedTool.name && p.active.attachedTool.name.includes('氣球')))) {
+        cost = Math.max(0, cost - 2);
+      }
       if ((p.active.attachedEnergy || []).length < cost) return { success: false, message: `能量不足 (需 ${cost} 個)` };
-      p.active.attachedEnergy.splice(0, cost);
+      if (cost > 0) {
+        const discarded = p.active.attachedEnergy.splice(0, cost);
+        p.discard.push(...discarded);
+      }
       const old = p.active;
       old.statusConditions = [];
       p.active = p.bench[benchIdx];

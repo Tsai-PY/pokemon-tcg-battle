@@ -551,7 +551,7 @@ function inspectCard(card, location, slotIndex = null) {
     const isToolCard = (card.supertype === 'trainer' && card.subtypes && card.subtypes.includes('Tool')) ||
                        card.supertype === 'tool' ||
                        (card.subtypes && card.subtypes.includes('Tool')) ||
-                       (card.name && (card.name.includes('護符') || card.name.includes('鈴鐺響') || card.name.includes('演進')));
+                       (card.name && (card.name.includes('護符') || card.name.includes('鈴鐺響') || card.name.includes('演進') || card.name.includes('氣球') || card.name.includes('斗篷')));
     if (isToolCard) {
       if (player.active && !player.active.attachedTool) {
         actionsHtml += `<button class="btn btn-secondary" onclick="doAttachTool('${card.instanceId}', 'active')">🛡️ 貼在戰鬥場「${player.active.name}」</button>`;
@@ -2336,7 +2336,10 @@ function openRetreatChoiceModal() {
     return;
   }
 
-  const retreatCost = typeof player.active.retreatCost === 'number' ? player.active.retreatCost : 1;
+  let retreatCost = typeof player.active.retreatCost === 'number' ? player.active.retreatCost : 1;
+  if (player.active.attachedTool && (player.active.attachedTool.id === 'air_balloon' || (player.active.attachedTool.name && player.active.attachedTool.name.includes('氣球')))) {
+    retreatCost = Math.max(0, retreatCost - 2);
+  }
   const attachedCount = (player.active.attachedEnergy || []).length;
   if (attachedCount < retreatCost) {
     alert(`撤退需要 ${retreatCost} 個能量，目前只有 ${attachedCount} 個能量！`);
