@@ -3163,6 +3163,37 @@ function findCardByName(rawName) {
           pl.hand.push(...pl.deck.splice(0, drawCount));
         }
         this.log(`⚡「奇樹」：雙方將手牌放回牌庫下方，並依各自剩餘獎賞卡張數抽牌！`);
+      } else if (supp.id === 'firebreather' || (supp.name && supp.name.includes('吹火人'))) {
+        const isBasicFireEnergy = (c) =>
+          c.supertype === 'energy' &&
+          !(c.subtypes && c.subtypes.includes('Special')) &&
+          (c.energyType === 'Fire' || (c.name && c.name.includes('火')));
+        const targetIds = (params && Array.isArray(params.targetCardIds)) ? params.targetCardIds.slice(0, 7) : [];
+        const addedNames = [];
+        if (targetIds.length > 0) {
+          targetIds.forEach(tId => {
+            const tIdx = p.deck.findIndex(c => c.instanceId === tId && isBasicFireEnergy(c));
+            if (tIdx !== -1) {
+              const card = p.deck.splice(tIdx, 1)[0];
+              p.hand.push(card);
+              addedNames.push(card.name);
+            }
+          });
+        } else if (!params || !Array.isArray(params.targetCardIds)) {
+          for (let k = 0; k < 7; k++) {
+            const autoIdx = p.deck.findIndex(isBasicFireEnergy);
+            if (autoIdx === -1) break;
+            const card = p.deck.splice(autoIdx, 1)[0];
+            p.hand.push(card);
+            addedNames.push(card.name);
+          }
+        }
+        p.deck = this._shuffle(p.deck);
+        if (addedNames.length > 0) {
+          this.log(`🔥「吹火人」：${p.name} 從牌庫選擇了 ${addedNames.length} 張「基本火能量」給對手看過後加入手牌，並重洗牌庫！`);
+        } else {
+          this.log(`🔥「吹火人」：${p.name} 檢索牌庫後未加入基本火能量，並重洗牌庫。`);
+        }
       } else {
         const draw = p.deck.splice(0, Math.min(3, p.deck.length));
         p.hand.push(...draw);

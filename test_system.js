@@ -371,6 +371,39 @@ const evOk2 = evGame.playItem(0, 'ev_2', {
 assert(evOk2.success, '同一回合應可再次使用物品卡「大地之器」');
 console.log('✓ 「大地之器」丟棄手牌條件、最多選 2 張基本能量與同回合不限張數驗證全數通過！');
 
+console.log('\n[Test 11] 測試支援者卡「吹火人」（從牌庫選擇最多 7 張基本火能量加入手牌並重洗牌庫）...');
+const fbGame = new PTCGGame(
+  'fb_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const fbP0 = fbGame.players[0];
+fbGame.turnNumber = 2;
+fbGame.activePlayerIndex = 0;
+fbP0.hand = [
+  { instanceId: 'fb_1', id: 'firebreather', name: '吹火人', supertype: 'trainer', subtypes: ['Supporter'] }
+];
+fbP0.deck = [
+  { instanceId: 'f1', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'f2', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'f3', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'f4', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'f5', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'f6', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'f7', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'f8', name: '基本火能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Fire' },
+  { instanceId: 'w1', name: '基本水能量', supertype: 'energy', subtypes: ['Basic'], energyType: 'Water' },
+  { instanceId: 'p1', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'] }
+];
+const fbRes = fbGame.playSupporter(0, 'fb_1', {
+  targetCardIds: ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'] // 刻意傳 8 張，應最多只拿 7 張
+});
+assert(fbRes.success, '使用吹火人應成功');
+assert.strictEqual(fbP0.hand.length, 7, '最多只能將 7 張基本火能量加入手牌');
+assert(fbP0.hand.every(c => c.energyType === 'Fire'), '加入手牌的應全為基本火能量');
+assert.strictEqual(fbP0.deck.length, 3, '牌庫應剩餘 3 張（1 張火能量 + 1 張水能量 + 1 張小火龍）');
+console.log('✓ 「吹火人」最多選擇 7 張基本火能量加入手牌並重洗牌庫驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');

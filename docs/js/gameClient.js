@@ -593,6 +593,8 @@ function inspectCard(card, location, slotIndex = null) {
               actionsHtml += `<button class="btn btn-primary" onclick="doPlayBossOrders('${card.instanceId}', ${bIdx})">📢 強制將對手備戰區「${b.name}」換上戰鬥場</button>`;
             });
           }
+        } else if (card.id === 'firebreather' || (card.name && card.name.includes('吹火人'))) {
+          actionsHtml += `<button class="btn btn-warning" onclick="openFirebreatherModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);">🔥 使用吹火人（從牌庫選最多 7 張基本火能量）</button>`;
         } else {
           actionsHtml += `<button class="btn btn-primary" onclick="doPlaySupporter('${card.instanceId}')">👤 使用此支援者卡</button>`;
         }
@@ -1309,8 +1311,149 @@ function confirmNestBallAction() {
 
 function doPlaySupporter(cardInstanceId) {
   closeCardActionModal();
+  const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+  const card = player && player.hand ? player.hand.find(c => c.instanceId === cardInstanceId) : null;
+  if (card && (card.id === 'firebreather' || (card.name && card.name.includes('吹火人')))) {
+    openFirebreatherModal(cardInstanceId);
+    return;
+  }
   sfx.playCard();
   sendGameAction('play_supporter', { cardInstanceId });
+}
+
+function openFirebreatherModal(cardInstanceId) {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  const isBasicFireEnergy = (c) =>
+    c.supertype === 'energy' &&
+    !(c.subtypes && c.subtypes.includes('Special')) &&
+    (c.energyType === 'Fire' || (c.name && c.name.includes('火')));
+
+  const fireEnergies = (player.deckCards || []).filter(isBasicFireEnergy);
+
+  searchModalState = {
+    mode: 'firebreather',
+    cardInstanceId,
+    selectedDiscardIds: [],
+    selectedTargetId: null,
+    selectedTargetIds: []
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `🔥 吹火人：從牌庫選擇最多 7 張「基本【火】能量」`;
+
+  body.innerHTML = `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #f87171;">請選擇要加入手牌的「基本火能量」卡（最多 7 張）</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          ${fireEnergies.length > 0 ? `<button type="button" class="btn btn-secondary btn-sm" onclick="selectAllFirebreatherTargets()">⚡ 一鍵全選 (最多7張)</button>` : ''}
+          <span id="fb-target-count-badge" style="background: #991b1b; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: bold;">
+            已選擇 0 / 7 張（牌庫共 ${fireEnergies.length} 張）
+          </span>
+        </div>
+      </div>
+      ${fireEnergies.length === 0 ? `
+        <div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; text-align: center; font-size: 0.9rem;">
+          ⚠️ 牌庫中目前沒有「基本火能量」卡（確認後將直接重洗牌庫）
+        </div>
+      ` : `
+        <div id="fb-deck-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; padding: 4px;">
+          ${fireEnergies.map(c => `
+            <div class="ub-card-choice fb-target-item" id="fb-target-${c.instanceId}" onclick="toggleFirebreatherTarget('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease; user-select: none;">
+              <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">🔥</span>`}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+              <div style="font-size: 0.7rem; color: #f87171;">基本火能量</div>
+              <div class="fb-target-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">✓ 加入手牌</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+
+  updateFirebreatherUI();
+  modal.classList.add('active');
+}
+
+function toggleFirebreatherTarget(cId) {
+  const arr = searchModalState.selectedTargetIds;
+  const idx = arr.indexOf(cId);
+  if (idx !== -1) {
+    arr.splice(idx, 1);
+  } else {
+    if (arr.length >= 7) {
+      arr.shift();
+    }
+    arr.push(cId);
+  }
+  updateFirebreatherUI();
+}
+
+function selectAllFirebreatherTargets() {
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  const isBasicFireEnergy = (c) =>
+    c.supertype === 'energy' &&
+    !(c.subtypes && c.subtypes.includes('Special')) &&
+    (c.energyType === 'Fire' || (c.name && c.name.includes('火')));
+  const fireEnergies = (player.deckCards || []).filter(isBasicFireEnergy).slice(0, 7);
+  searchModalState.selectedTargetIds = fireEnergies.map(c => c.instanceId);
+  updateFirebreatherUI();
+}
+
+function updateFirebreatherUI() {
+  const deckGrid = document.getElementById('fb-deck-grid');
+  if (deckGrid) {
+    deckGrid.querySelectorAll('.fb-target-item').forEach(el => {
+      const cId = el.id.replace('fb-target-', '');
+      const isSelected = searchModalState.selectedTargetIds.includes(cId);
+      el.style.borderColor = isSelected ? '#ef4444' : '#334155';
+      el.style.background = isSelected ? 'rgba(239, 68, 68, 0.18)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(239, 68, 68, 0.6)' : 'none';
+      const badge = el.querySelector('.fb-target-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+
+  const badge = document.getElementById('fb-target-count-badge');
+  if (badge) {
+    const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+    const total = player && player.deckCards ? player.deckCards.filter(c => c.supertype === 'energy' && !(c.subtypes && c.subtypes.includes('Special')) && (c.energyType === 'Fire' || (c.name && c.name.includes('火')))).length : 0;
+    badge.textContent = `已選擇 ${searchModalState.selectedTargetIds.length} / 7 張（牌庫共 ${total} 張）`;
+  }
+
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    const selCount = searchModalState.selectedTargetIds.length;
+    confirmBtn.disabled = false;
+    confirmBtn.className = 'btn btn-warning';
+    confirmBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    confirmBtn.style.color = '#fff';
+    confirmBtn.textContent = selCount > 0
+      ? `🔥 確認將 ${selCount} 張「基本火能量」加入手牌並重洗牌庫`
+      : `🔥 確認不拿取並重洗牌庫`;
+    confirmBtn.onclick = confirmFirebreatherAction;
+  }
+}
+
+function confirmFirebreatherAction() {
+  const payload = {
+    cardInstanceId: searchModalState.cardInstanceId,
+    targetCardIds: searchModalState.selectedTargetIds
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('play_supporter', payload);
 }
 
 function doPlayBossOrders(cardInstanceId, oppBenchIndex) {
