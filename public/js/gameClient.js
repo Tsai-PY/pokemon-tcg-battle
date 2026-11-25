@@ -577,6 +577,12 @@ function inspectCard(card, location, slotIndex = null) {
         }
       } else if (card.id === 'poke_pad' || card.name.includes('寶可平板') || card.name.includes('寶可夢平板')) {
         actionsHtml += `<button class="btn btn-primary" onclick="openPokePadModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; box-shadow: 0 0 12px rgba(14, 165, 233, 0.4);">📱 使用寶可平板（從牌庫選 1 張無規則寶可夢加入手牌）</button>`;
+      } else if (card.id === 'rare_candy' || card.effect === 'rare_candy_evolve' || card.name.includes('神奇糖果')) {
+        if (currentGameState.turnNumber <= 2) {
+          actionsHtml += `<button class="btn btn-secondary" disabled style="opacity: 0.6; cursor: not-allowed;">🍬 神奇糖果（自己的最初回合不可使用）</button>`;
+        } else {
+          actionsHtml += `<button class="btn btn-primary" onclick="openRareCandyModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);">🍬 使用神奇糖果（跳過 1 階直接進化為 2 階寶可夢）</button>`;
+        }
       } else {
         actionsHtml += `<button class="btn btn-primary" onclick="doPlayItem('${card.instanceId}')">🎒 使用此物品卡</button>`;
       }
@@ -773,6 +779,10 @@ function doPlayItem(cardInstanceId) {
   }
   if (card && (card.id === 'poke_pad' || card.name.includes('寶可平板') || card.name.includes('寶可夢平板'))) {
     openPokePadModal(cardInstanceId);
+    return;
+  }
+  if (card && (card.id === 'rare_candy' || card.effect === 'rare_candy_evolve' || card.name.includes('神奇糖果'))) {
+    openRareCandyModal(cardInstanceId);
     return;
   }
   sfx.playCard();
@@ -1420,6 +1430,190 @@ function confirmPokePadAction() {
   const payload = {
     cardInstanceId: searchModalState.cardInstanceId,
     targetCardId: searchModalState.selectedTargetId
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('play_item', payload);
+}
+
+// 神奇糖果 Modal：選手牌 1 張【2階進化】寶可夢 + 場上可進化之【基礎】寶可夢
+function getRareCandyBaseName(s2Card) {
+  if (!s2Card || !s2Card.evolvesFrom) return null;
+  if (typeof window.findCardByName === 'function') {
+    const s1 = window.findCardByName(s2Card.evolvesFrom);
+    if (s1 && s1.evolvesFrom) return s1.evolvesFrom;
+  }
+  const fallbackMap = {
+    '火恐龍': '小火龍', '奇魯莉安': '拉魯拉絲', '比比鳥': '波波',
+    '凍脊龍': '涼脊龍', '多龍奇': '多龍梅西亞', '哈克龍': '迷你龍'
+  };
+  return fallbackMap[s2Card.evolvesFrom] || null;
+}
+
+function openRareCandyModal(cardInstanceId) {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  if (currentGameState.turnNumber <= 2) {
+    alert('⚠️ 規則限制：「神奇糖果」無法對自己的最初回合使用！');
+    return;
+  }
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  const stage2InHand = (player.hand || []).filter(
+    c => c.supertype === 'pokemon' && Array.isArray(c.subtypes) && c.subtypes.includes('Stage 2')
+  );
+  if (stage2InHand.length === 0) {
+    alert('⚠️ 您的手牌中目前沒有【2階進化】寶可夢卡，無法使用神奇糖果！');
+    return;
+  }
+
+  searchModalState = {
+    mode: 'rare_candy',
+    cardInstanceId,
+    selectedDiscardIds: [],
+    selectedTargetId: null,
+    selectedTargetIds: [],
+    rareCandyStage2Id: stage2InHand.length === 1 ? stage2InHand[0].instanceId : null,
+    rareCandySlot: null
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `🍬 神奇糖果：跳過 1 階直接完成 2 階進化`;
+
+  body.innerHTML = `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="font-weight: 800; font-size: 1rem; color: #818cf8; margin-bottom: 10px;">
+        ① 選擇手牌中 1 張【2階進化】寶可夢卡
+      </div>
+      <div id="rc-stage2-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 10px;">
+        ${stage2InHand.map(c => {
+          const baseName = getRareCandyBaseName(c) || '基礎寶可夢';
+          return `
+            <div class="ub-card-choice rc-s2-item" id="rc-s2-${c.instanceId}" onclick="selectRareCandyStage2('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease;">
+              <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">🐉</span>`}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc;">${c.name}</div>
+              <div style="font-size: 0.7rem; color: #94a3b8;">由「${baseName}」跳階進化</div>
+              <div class="rc-s2-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #6366f1; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">✓ 已選</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="font-weight: 800; font-size: 1rem; color: #34d399; margin-bottom: 10px;">
+        ② 選擇場上對應的【基礎】寶可夢（本回合剛出場者不可進化）
+      </div>
+      <div id="rc-targets-container"></div>
+    </div>
+  `;
+
+  updateRareCandyUI();
+  modal.classList.add('active');
+}
+
+function selectRareCandyStage2(cId) {
+  searchModalState.rareCandyStage2Id = cId;
+  searchModalState.rareCandySlot = null;
+  updateRareCandyUI();
+}
+
+function selectRareCandySlot(slotKey) {
+  searchModalState.rareCandySlot = slotKey === 'active' ? 'active' : parseInt(slotKey, 10);
+  updateRareCandyUI();
+}
+
+function updateRareCandyUI() {
+  const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+  if (!player) return;
+
+  const s2Grid = document.getElementById('rc-stage2-grid');
+  if (s2Grid) {
+    s2Grid.querySelectorAll('.rc-s2-item').forEach(el => {
+      const cId = el.id.replace('rc-s2-', '');
+      const isSelected = searchModalState.rareCandyStage2Id === cId;
+      el.style.borderColor = isSelected ? '#6366f1' : '#334155';
+      el.style.background = isSelected ? 'rgba(99, 102, 241, 0.2)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(99, 102, 241, 0.6)' : 'none';
+      const badge = el.querySelector('.rc-s2-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+
+  const s2Card = (player.hand || []).find(c => c.instanceId === searchModalState.rareCandyStage2Id);
+  const expectedBase = s2Card ? getRareCandyBaseName(s2Card) : null;
+  const targetsContainer = document.getElementById('rc-targets-container');
+
+  const fieldSlots = [];
+  if (player.active) fieldSlots.push({ slot: 'active', label: '戰鬥場', card: player.active });
+  (player.bench || []).forEach((b, idx) => {
+    if (b) fieldSlots.push({ slot: idx, label: `備戰區 ${idx + 1}`, card: b });
+  });
+
+  const eligible = fieldSlots.filter(item => {
+    const c = item.card;
+    const isBasic = Array.isArray(c.subtypes) && c.subtypes.includes('Basic');
+    const notJustPlayed = c.turnPlayed !== currentGameState.turnNumber;
+    const matchesBase = !expectedBase || c.name === expectedBase;
+    return isBasic && notJustPlayed && matchesBase;
+  });
+
+  if (targetsContainer) {
+    if (!s2Card) {
+      targetsContainer.innerHTML = `<div style="padding: 12px; color: #94a3b8; text-align: center;">請先於步驟 ① 選擇要進化的【2階進化】寶可夢卡</div>`;
+    } else if (eligible.length === 0) {
+      targetsContainer.innerHTML = `<div style="padding: 12px; background: #1e293b; border-radius: 8px; color: #f87171; text-align: center; font-size: 0.9rem;">⚠️ 場上目前沒有符合條件的「${expectedBase || '基礎寶可夢'}」（或該寶可夢是本回合剛出場，無法進化）</div>`;
+    } else {
+      targetsContainer.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;">
+          ${eligible.map(item => {
+            const isSel = searchModalState.rareCandySlot === item.slot;
+            return `
+              <div onclick="selectRareCandySlot('${item.slot}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid ${isSel ? '#10b981' : '#334155'}; background: ${isSel ? 'rgba(16, 185, 129, 0.2)' : '#0f172a'}; box-shadow: ${isSel ? '0 0 12px rgba(16,185,129,0.6)' : 'none'}; padding: 8px; text-align: center;">
+                <div style="font-size: 0.72rem; color: #38bdf8; margin-bottom: 4px;">${item.label}</div>
+                <div style="font-size: 0.85rem; font-weight: bold; color: #f8fafc;">${item.card.name}</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">HP ${item.card.currentHp ?? item.card.hp}/${item.card.maxHp ?? item.card.hp}</div>
+                ${isSel ? `<div style="position: absolute; top: 4px; right: 4px; background: #10b981; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 5px; border-radius: 4px;">✓ 進化</div>` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+  }
+
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    const ready = Boolean(s2Card) && (searchModalState.rareCandySlot !== null && searchModalState.rareCandySlot !== undefined);
+    if (!ready) {
+      confirmBtn.disabled = true;
+      confirmBtn.className = 'btn btn-secondary';
+      confirmBtn.style.background = '#475569';
+      confirmBtn.textContent = !s2Card ? '請先選擇 2 階進化寶可夢' : '請選擇場上要進化的基礎寶可夢';
+      confirmBtn.onclick = null;
+    } else {
+      confirmBtn.disabled = false;
+      confirmBtn.className = 'btn btn-primary';
+      confirmBtn.style.background = 'linear-gradient(135deg, #3b82f6, #6366f1)';
+      confirmBtn.style.color = '#fff';
+      confirmBtn.textContent = `🍬 確認使用神奇糖果進化為「${s2Card.name}」`;
+      confirmBtn.onclick = confirmRareCandyAction;
+    }
+  }
+}
+
+function confirmRareCandyAction() {
+  const payload = {
+    cardInstanceId: searchModalState.cardInstanceId,
+    stage2CardId: searchModalState.rareCandyStage2Id,
+    targetSlot: searchModalState.rareCandySlot
   };
   sfx.playCard();
   closeCardSelectionModal();

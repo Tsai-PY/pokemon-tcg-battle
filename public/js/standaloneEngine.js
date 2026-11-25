@@ -2970,6 +2970,70 @@ function findCardByName(rawName) {
         return { success: false, message: '使用「大地之器」必須將 1 張其他手牌丟棄到棄牌區，目前沒有其他手牌可丟棄！' };
       }
 
+      const isRareCandy = previewItem.id === 'rare_candy' || previewItem.effect === 'rare_candy_evolve' || (previewItem.name && previewItem.name.includes('神奇糖果'));
+      if (isRareCandy) {
+        if (this.turnNumber <= 2) {
+          return { success: false, message: '規則限制：「神奇糖果」無法在自己的最初回合使用！' };
+        }
+        const getBaseNameForStage2 = (s2) => {
+          if (!s2 || !s2.evolvesFrom) return null;
+          const s1 = findCardByName(s2.evolvesFrom);
+          if (s1 && s1.evolvesFrom) return s1.evolvesFrom;
+          const fallbackMap = {
+            '火恐龍': '小火龍', '奇魯莉安': '拉魯拉絲', '比比鳥': '波波',
+            '凍脊龍': '涼脊龍', '多龍奇': '多龍梅西亞', '哈克龍': '迷你龍'
+          };
+          return fallbackMap[s2.evolvesFrom] || null;
+        };
+        const stage2Idx = p.hand.findIndex(c =>
+          c.instanceId === (params && params.stage2CardId) &&
+          c.supertype === 'pokemon' &&
+          Array.isArray(c.subtypes) && c.subtypes.includes('Stage 2')
+        );
+        if (stage2Idx === -1) {
+          return { success: false, message: '請從手牌選擇 1 張【2階進化】寶可夢卡！' };
+        }
+        const stage2Card = p.hand[stage2Idx];
+        const expectedBaseName = getBaseNameForStage2(stage2Card);
+
+        const targetSlot = params && params.targetSlot;
+        const target = targetSlot === 'active' ? p.active : (typeof targetSlot === 'number' ? p.bench[targetSlot] : null);
+        if (!target) {
+          return { success: false, message: '找不到要進化的場上【基礎】寶可夢！' };
+        }
+        if (!Array.isArray(target.subtypes) || !target.subtypes.includes('Basic')) {
+          return { success: false, message: `「${target.name}」不是【基礎】寶可夢，無法使用神奇糖果！` };
+        }
+        if (target.turnPlayed === this.turnNumber) {
+          return { success: false, message: `「${target.name}」是這個回合剛使出的寶可夢，無法對其使用神奇糖果！` };
+        }
+        if (expectedBaseName && target.name !== expectedBaseName) {
+          return { success: false, message: `「${stage2Card.name}」必須由「${expectedBaseName}」跳階進化，無法放在「${target.name}」身上！` };
+        }
+
+        // 消耗神奇糖果與手牌中的 2 階進化卡，完成跳階進化
+        const item = p.hand.splice(idx, 1)[0];
+        p.discard.push(item);
+        const newS2Idx = p.hand.findIndex(c => c.instanceId === stage2Card.instanceId);
+        if (newS2Idx !== -1) p.hand.splice(newS2Idx, 1);
+
+        const prevName = target.name;
+        const evolved = {
+          ...stage2Card,
+          attachedEnergy: target.attachedEnergy || [],
+          attachedTool: target.attachedTool || null,
+          maxHpBonus: 0,
+          damage: target.damage || 0,
+          statusConditions: [],
+          turnPlayed: this.turnNumber
+        };
+        if (targetSlot === 'active') p.active = evolved;
+        else p.bench[targetSlot] = evolved;
+
+        this.log(`🍬「神奇糖果」：${p.name} 跳過 1 階進化，將場上的基礎寶可夢「${prevName}」直接進化為「${stage2Card.name}」（HP: ${stage2Card.hp}）！`);
+        return { success: true };
+      }
+
       const item = p.hand.splice(idx, 1)[0];
       p.discard.push(item);
 

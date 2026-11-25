@@ -461,6 +461,54 @@ assert(dawnP0.hand.some(c => c.instanceId === 'b_1') && dawnP0.hand.some(c => c.
 assert.strictEqual(dawnP0.deck.length, 1, '牌庫應僅剩 1 張基本火能量');
 console.log('✓ 「小光」從牌庫選擇基礎、1階進化、2階進化寶可夢各 1 張加入手牌驗證全數通過！');
 
+console.log('\n[Test 14] 測試物品卡「神奇糖果」（跳過 1 階完成 2 階進化、最初回合與剛出場不可用、同回合不限張數）...');
+const rcGame = new PTCGGame(
+  'rc_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const rcP0 = rcGame.players[0];
+rcGame.activePlayerIndex = 0;
+rcP0.active = {
+  instanceId: 'rc_base_a', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'],
+  hp: 80, damage: 20, turnPlayed: 1, statusConditions: ['poisoned'],
+  attachedEnergy: [{ instanceId: 'rc_e1', name: '基本火能量', supertype: 'energy', energyType: 'Fire' }]
+};
+rcP0.bench = [
+  { instanceId: 'rc_base_new', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'], hp: 80, damage: 0, turnPlayed: 3, attachedEnergy: [] },
+  { instanceId: 'rc_base_old', name: '拉魯拉絲', supertype: 'pokemon', subtypes: ['Basic'], hp: 70, damage: 0, turnPlayed: 1, attachedEnergy: [] }
+];
+rcP0.hand = [
+  { instanceId: 'rc_item_1', id: 'rare_candy', name: '神奇糖果', supertype: 'trainer', subtypes: ['Item'] },
+  { instanceId: 'rc_item_2', id: 'rare_candy', name: '神奇糖果', supertype: 'trainer', subtypes: ['Item'] },
+  { instanceId: 'rc_s2_char', id: 'mega_charizard_x_ex', name: '超級噴火龍Xex', supertype: 'pokemon', subtypes: ['Stage 2', 'ex'], evolvesFrom: '火恐龍', hp: 360, isEx: true },
+  { instanceId: 'rc_s2_gard', id: 'mega_gardevoir_ex', name: '超級沙奈朵ex', supertype: 'pokemon', subtypes: ['Stage 2', 'ex'], evolvesFrom: '奇魯莉安', hp: 360, isEx: true }
+];
+
+// 1. 最初回合（turn 1）不可使用
+rcGame.turnNumber = 1;
+const rcTurn1Fail = rcGame.playItem(0, 'rc_item_1', { stage2CardId: 'rc_s2_char', targetSlot: 'active' });
+assert(!rcTurn1Fail.success, '最初回合應禁止使用神奇糖果');
+
+// 2. 第 3 回合對「本回合剛出場」的小火龍（bench[0]）不可使用
+rcGame.turnNumber = 3;
+const rcFreshFail = rcGame.playItem(0, 'rc_item_1', { stage2CardId: 'rc_s2_char', targetSlot: 0 });
+assert(!rcFreshFail.success, '本回合剛使出的基礎寶可夢不可使用神奇糖果進化');
+
+// 3. 第 3 回合對第 1 回合已在場上的小火龍（active）成功跳階進化為超級噴火龍Xex，保留能量與傷害並清除中毒
+const rcOk1 = rcGame.playItem(0, 'rc_item_1', { stage2CardId: 'rc_s2_char', targetSlot: 'active' });
+assert(rcOk1.success, '神奇糖果進化小火龍為超級噴火龍Xex應成功');
+assert.strictEqual(rcP0.active.name, '超級噴火龍Xex', '戰鬥場應進化為超級噴火龍Xex');
+assert.strictEqual(rcP0.active.damage, 20, '應保留原傷害 20');
+assert.strictEqual(rcP0.active.attachedEnergy.length, 1, '應保留原附加能量');
+assert.strictEqual(rcP0.active.statusConditions.length, 0, '進化後應清除特殊狀態');
+
+// 4. 同回合再使用第 2 張神奇糖果將備戰區拉魯拉絲（bench[1]）進化為超級沙奈朵ex（驗證物品卡不限張數）
+const rcOk2 = rcGame.playItem(0, 'rc_item_2', { stage2CardId: 'rc_s2_gard', targetSlot: 1 });
+assert(rcOk2.success, '同回合應可再次使用第 2 張神奇糖果');
+assert.strictEqual(rcP0.bench[1].name, '超級沙奈朵ex', '備戰區拉魯拉絲應進化為超級沙奈朵ex');
+console.log('✓ 「神奇糖果」跳階進化、最初回合與剛出場限制、保留能量傷害及同回合不限張數驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');
