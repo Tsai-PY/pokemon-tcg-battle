@@ -3061,6 +3061,36 @@ function findCardByName(rawName) {
         } else {
           this.log(`🏺「大地之器」：${p.name} 丟棄了「${discardedName}」，檢索牌庫後未加入基本能量卡，並重洗牌庫。`);
         }
+      } else if (item.id === 'poke_pad' || item.name.includes('寶可平板') || item.name.includes('寶可夢平板')) {
+        const hasRuleBox = (c) => {
+          if (!c || c.supertype !== 'pokemon') return false;
+          if (c.isEx) return true;
+          const subs = c.subtypes || [];
+          if (subs.some(s => ['ex', 'EX', 'V', 'VMAX', 'VSTAR', 'GX', 'Radiant'].includes(s))) return true;
+          const nm = c.name || '';
+          return /(?:ex|EX|V|VMAX|VSTAR|GX)$/.test(nm) || nm.startsWith('光輝');
+        };
+        const isValidTarget = (c) => c.supertype === 'pokemon' && !hasRuleBox(c);
+        let picked = null;
+        if (params && params.targetCardId) {
+          const tIdx = p.deck.findIndex(c => c.instanceId === params.targetCardId && isValidTarget(c));
+          if (tIdx !== -1) {
+            picked = p.deck.splice(tIdx, 1)[0];
+            p.hand.push(picked);
+          }
+        } else if ((!params || !('targetCardId' in params)) && p.isAi) {
+          const autoIdx = p.deck.findIndex(isValidTarget);
+          if (autoIdx !== -1) {
+            picked = p.deck.splice(autoIdx, 1)[0];
+            p.hand.push(picked);
+          }
+        }
+        p.deck = this._shuffle(p.deck);
+        if (picked) {
+          this.log(`📱「寶可平板」：${p.name} 從牌庫選擇了「${picked.name}」（無規則寶可夢）給對手看過後加入手牌，並重洗牌庫！`);
+        } else {
+          this.log(`📱「寶可平板」：${p.name} 檢索牌庫後未加入寶可夢，並重洗牌庫。`);
+        }
       } else if (item.name.includes('巢穴球') || item.id === 'nest_ball' || item.effect === 'search_basic_bench') {
         if (p.bench.length >= 5) {
           this.log(`⚾「巢穴球」：${p.name} 備戰區已滿（上限 5 隻），無法放置！`);

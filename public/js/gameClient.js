@@ -575,6 +575,8 @@ function inspectCard(card, location, slotIndex = null) {
         } else {
           actionsHtml += `<button class="btn btn-primary" onclick="openNestBallModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); color: #fff;">⚾ 使用巢穴球（從牌庫選 1 隻基礎寶可夢放置備戰區）</button>`;
         }
+      } else if (card.id === 'poke_pad' || card.name.includes('寶可平板') || card.name.includes('寶可夢平板')) {
+        actionsHtml += `<button class="btn btn-primary" onclick="openPokePadModal('${card.instanceId}')" style="font-weight: 800; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; box-shadow: 0 0 12px rgba(14, 165, 233, 0.4);">📱 使用寶可平板（從牌庫選 1 張無規則寶可夢加入手牌）</button>`;
       } else {
         actionsHtml += `<button class="btn btn-primary" onclick="doPlayItem('${card.instanceId}')">🎒 使用此物品卡</button>`;
       }
@@ -765,6 +767,10 @@ function doPlayItem(cardInstanceId) {
   }
   if (card && (card.name.includes('巢穴球') || card.id === 'nest_ball')) {
     openNestBallModal(cardInstanceId);
+    return;
+  }
+  if (card && (card.id === 'poke_pad' || card.name.includes('寶可平板') || card.name.includes('寶可夢平板'))) {
+    openPokePadModal(cardInstanceId);
     return;
   }
   sfx.playCard();
@@ -1300,6 +1306,115 @@ function updateNestBallModalUI() {
 }
 
 function confirmNestBallAction() {
+  const payload = {
+    cardInstanceId: searchModalState.cardInstanceId,
+    targetCardId: searchModalState.selectedTargetId
+  };
+  sfx.playCard();
+  closeCardSelectionModal();
+  sendGameAction('play_item', payload);
+}
+
+// 寶可平板 Modal：從牌庫選擇 1 張寶可夢卡（「擁有規則的寶可夢」除外）加入手牌並重洗牌庫
+function openPokePadModal(cardInstanceId) {
+  closeCardActionModal();
+  if (!currentGameState) return;
+  const player = currentGameState.players[currentPlayerIndex];
+  if (!player) return;
+
+  const hasRuleBox = (c) => {
+    if (!c || c.supertype !== 'pokemon') return false;
+    if (c.isEx) return true;
+    const subs = c.subtypes || [];
+    if (subs.some(s => ['ex', 'EX', 'V', 'VMAX', 'VSTAR', 'GX', 'Radiant'].includes(s))) return true;
+    const nm = c.name || '';
+    return /(?:ex|EX|V|VMAX|VSTAR|GX)$/.test(nm) || nm.startsWith('光輝');
+  };
+  const validPokemons = (player.deckCards || []).filter(c => c.supertype === 'pokemon' && !hasRuleBox(c));
+
+  searchModalState = {
+    mode: 'poke_pad',
+    cardInstanceId,
+    selectedDiscardIds: [],
+    selectedTargetId: null,
+    selectedTargetIds: []
+  };
+
+  const modal = document.getElementById('card-selection-modal');
+  const title = document.getElementById('card-selection-modal-title');
+  const body = document.getElementById('card-selection-modal-body');
+  if (!modal || !title || !body) return;
+
+  title.innerHTML = `📱 寶可平板：選擇 1 張無規則寶可夢加入手牌`;
+
+  body.innerHTML = `
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #475569; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 800; font-size: 1rem; color: #38bdf8;">請選擇 1 張寶可夢卡（「擁有規則的寶可夢」ex/V/光輝 已自動排除）</span>
+        <span style="color: #94a3b8; font-size: 0.85rem;">牌庫符合條件：${validPokemons.length} 張</span>
+      </div>
+      ${validPokemons.length === 0 ? `
+        <div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; text-align: center; font-size: 0.9rem;">
+          ⚠️ 牌庫中目前沒有符合條件的無規則寶可夢（確認後將直接重洗牌庫）
+        </div>
+      ` : `
+        <div id="pp-deck-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; padding: 4px;">
+          ${validPokemons.map(c => `
+            <div class="ub-card-choice pp-target-item" id="pp-target-${c.instanceId}" onclick="selectPokePadTarget('${c.instanceId}')" style="cursor: pointer; position: relative; border-radius: 8px; border: 2px solid #334155; background: #0f172a; padding: 6px; text-align: center; transition: all 0.2s ease; user-select: none;">
+              <div style="height: 100px; overflow: hidden; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; background: #1e293b;">
+                ${c.imageUrl ? `<img src="${c.imageUrl}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : `<span style="font-size: 2rem;">🐾</span>`}
+              </div>
+              <div style="font-size: 0.8rem; font-weight: bold; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name}</div>
+              <div style="font-size: 0.7rem; color: #38bdf8;">${c.hp ? `HP ${c.hp}` : '寶可夢'}</div>
+              <div class="pp-target-badge" style="display: none; position: absolute; top: 4px; right: 4px; background: #0ea5e9; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">✓ 加入手牌</div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </div>
+  `;
+
+  updatePokePadUI();
+  modal.classList.add('active');
+}
+
+function selectPokePadTarget(cId) {
+  searchModalState.selectedTargetId = (searchModalState.selectedTargetId === cId) ? null : cId;
+  updatePokePadUI();
+}
+
+function updatePokePadUI() {
+  const player = currentGameState ? currentGameState.players[currentPlayerIndex] : null;
+  const deckCards = (player && player.deckCards) || [];
+  const deckGrid = document.getElementById('pp-deck-grid');
+  if (deckGrid) {
+    deckGrid.querySelectorAll('.pp-target-item').forEach(el => {
+      const cId = el.id.replace('pp-target-', '');
+      const isSelected = searchModalState.selectedTargetId === cId;
+      el.style.borderColor = isSelected ? '#0ea5e9' : '#334155';
+      el.style.background = isSelected ? 'rgba(14, 165, 233, 0.18)' : '#0f172a';
+      el.style.boxShadow = isSelected ? '0 0 12px rgba(14, 165, 233, 0.6)' : 'none';
+      const badge = el.querySelector('.pp-target-badge');
+      if (badge) badge.style.display = isSelected ? 'block' : 'none';
+    });
+  }
+  const confirmBtn = document.getElementById('card-selection-confirm-btn');
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.className = 'btn btn-primary';
+    confirmBtn.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+    confirmBtn.style.color = '#fff';
+    if (searchModalState.selectedTargetId) {
+      const card = deckCards.find(c => c.instanceId === searchModalState.selectedTargetId);
+      confirmBtn.textContent = `📱 確認將「${card ? card.name : '寶可夢'}」加入手牌並重洗牌庫`;
+    } else {
+      confirmBtn.textContent = `📱 確認不拿取並重洗牌庫`;
+    }
+    confirmBtn.onclick = confirmPokePadAction;
+  }
+}
+
+function confirmPokePadAction() {
   const payload = {
     cardInstanceId: searchModalState.cardInstanceId,
     targetCardId: searchModalState.selectedTargetId

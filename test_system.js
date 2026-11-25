@@ -404,6 +404,34 @@ assert(fbP0.hand.every(c => c.energyType === 'Fire'), '加入手牌的應全為�
 assert.strictEqual(fbP0.deck.length, 3, '牌庫應剩餘 3 張（1 張火能量 + 1 張水能量 + 1 張小火龍）');
 console.log('✓ 「吹火人」最多選擇 7 張基本火能量加入手牌並重洗牌庫驗證全數通過！');
 
+console.log('\n[Test 12] 測試物品卡「寶可平板」（從牌庫選擇 1 張無規則寶可夢加入手牌並重洗牌庫）...');
+const ppGame = new PTCGGame(
+  'pp_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const ppP0 = ppGame.players[0];
+ppGame.turnNumber = 2;
+ppGame.activePlayerIndex = 0;
+ppP0.hand = [
+  { instanceId: 'pp_1', id: 'poke_pad', name: '寶可平板', supertype: 'trainer', subtypes: ['Item'] },
+  { instanceId: 'pp_2', id: 'poke_pad', name: '寶可平板', supertype: 'trainer', subtypes: ['Item'] }
+];
+ppP0.deck = [
+  { instanceId: 'ex_1', id: 'mega_charizard_x_ex', name: '超級噴火龍Xex', supertype: 'pokemon', subtypes: ['Stage 2', 'ex'], isEx: true },
+  { instanceId: 'rad_1', id: 'radiant_greninja', name: '光輝甲賀忍蛙', supertype: 'pokemon', subtypes: ['Basic', 'Radiant'] },
+  { instanceId: 'evo_1', id: 'charmeleon', name: '火恐龍', supertype: 'pokemon', subtypes: ['Stage 1'] }
+];
+// 1. 嘗試選取擁有規則的寶可夢（超級噴火龍Xex）應被忽略
+const ppTryEx = ppGame.playItem(0, 'pp_1', { targetCardId: 'ex_1' });
+assert(ppTryEx.success, '寶可平板結算應成功');
+assert(!ppP0.hand.some(c => c.instanceId === 'ex_1'), '不可選取擁有規則的寶可夢（超級噴火龍Xex）');
+// 2. 選取無規則的進化寶可夢（火恐龍）應成功加入手牌
+const ppOk = ppGame.playItem(0, 'pp_2', { targetCardId: 'evo_1' });
+assert(ppOk.success, '寶可平板選取火恐龍應成功');
+assert(ppP0.hand.some(c => c.instanceId === 'evo_1'), '無規則寶可夢「火恐龍」應加入手牌');
+console.log('✓ 「寶可平板」排除擁有規則的寶可夢並檢索無規則寶可夢加入手牌驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');
