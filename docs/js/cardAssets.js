@@ -180,7 +180,8 @@ const OFFICIAL_CARD_IMAGES = {
   '寶可夢交換': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_194_R_EN_MD.png',
   '聖灰': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FLF/FLF_096_R_EN_MD.png',
   '米可利': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_166_R_EN_MD.png',
-  '莉莉艾的決意': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_196_R_EN_MD.png',
+  '莉莉艾': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/UPR/UPR_125_R_EN_MD.png',
+  '莉莉艾的決意': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/023_fb139333.png',
   '厲害釣竿': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAL/PAL_188_R_EN_MD.png',
   '招式學習演進': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAR/PAR_178_R_EN_MD.png',
   '雪童子': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PAR/PAR_037_R_EN_MD.png',
@@ -1166,6 +1167,15 @@ const CARD_USAGE_GUIDES = {
     effectText: '從自己的牌庫抽取 3 張卡。若自己的戰鬥寶可夢為水屬性，則改為抽取 4 張卡！',
     timingText: '在自己的回合【主要階段】使用，每回合限用 1 張支援者。',
     tacticsTip: '水屬性隊伍專屬強效過牌手，配合古劍豹ex或水君V在戰鬥場時可穩定補充 4 張手牌！'
+  },
+  '莉莉艾': {
+    categoryBadge: '👤 支援者卡',
+    categoryClass: 'guide-badge-supporter',
+    timingBadge: '補滿6張 · 最初回合補滿8張',
+    timingClass: 'guide-badge-timing',
+    effectText: '從牌庫抽卡直到自己的手牌滿 6 張為止。若在自己的最初回合使用，則抽卡直到滿 8 張為止。',
+    timingText: '在自己的回合【主要階段】使用，每回合限用 1 張支援者。',
+    tacticsTip: '先將手上可出的基礎寶可夢、物品卡與能量卡全部打光後再發動莉莉艾，可最大化抽牌收益！'
   },
   '莉莉艾的決意': {
     categoryBadge: '👤 支援者卡',

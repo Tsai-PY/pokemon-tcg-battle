@@ -1633,6 +1633,14 @@
     text: '從自己的牌庫抽3張卡。若自己的戰鬥寶可夢為水屬性，則改為抽4張卡。'
   },
   {
+    id: 'lillie',
+    name: '莉莉艾',
+    supertype: 'trainer',
+    subtypes: ['Supporter'],
+    effect: 'lillie_draw_to_6_or_8',
+    text: '從牌庫抽卡直到自己的手牌滿6張為止。若在自己的最初回合使用，則抽卡直到滿8張為止。'
+  },
+  {
     id: 'lillies_determination',
     name: '莉莉艾的決意',
     supertype: 'trainer',
@@ -2334,7 +2342,8 @@ function findCardByName(rawName) {
     '真菰': '真菰',
     'lilliefulldetermination': '莉莉艾的決意',
     '莉莉艾的決意': '莉莉艾的決意',
-    '莉莉艾': '莉莉艾的決意',
+    'lillie': '莉莉艾',
+    '莉莉艾': '莉莉艾',
 
     // Energies
     'fireenergy': '基本火能量',
@@ -3317,6 +3326,22 @@ function findCardByName(rawName) {
         } else {
           this.log(`🌟「小光」：${p.name} 檢索牌庫後未加入寶可夢，並重洗牌庫。`);
         }
+      } else if (supp.id === 'lillies_determination' || supp.effect === 'lillie_determination_draw' || (supp.name && supp.name.includes('莉莉艾的決意'))) {
+        p.deck.push(...p.hand);
+        p.hand = [];
+        p.deck = this._shuffle(p.deck);
+        const targetDraw = (p.prizes.length === 6) ? 8 : 6;
+        const drawCount = Math.min(p.deck.length, targetDraw);
+        p.hand.push(...p.deck.splice(0, drawCount));
+        this.log(`🌸「莉莉艾的決意」：${p.name} 將手牌全部放回牌庫重洗，並抽出了 ${drawCount} 張卡（剩餘獎賞卡 ${p.prizes.length} 張）！`);
+      } else if (supp.id === 'lillie' || supp.effect === 'lillie_draw_to_6_or_8' || (supp.name && supp.name.includes('莉莉艾'))) {
+        const targetHand = (this.turnNumber <= 2) ? 8 : 6;
+        const needDraw = Math.max(0, targetHand - p.hand.length);
+        const drawCount = Math.min(p.deck.length, needDraw);
+        if (drawCount > 0) {
+          p.hand.push(...p.deck.splice(0, drawCount));
+        }
+        this.log(`🌸「莉莉艾」：${p.name} 從牌庫抽了 ${drawCount} 張卡，使手牌補充至 ${p.hand.length} 張（上限 ${targetHand} 張）！`);
       } else {
         const draw = p.deck.splice(0, Math.min(3, p.deck.length));
         p.hand.push(...draw);

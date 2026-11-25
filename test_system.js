@@ -509,6 +509,51 @@ assert(rcOk2.success, '同回合應可再次使用第 2 張神奇糖果');
 assert.strictEqual(rcP0.bench[1].name, '超級沙奈朵ex', '備戰區拉魯拉絲應進化為超級沙奈朵ex');
 console.log('✓ 「神奇糖果」跳階進化、最初回合與剛出場限制、保留能量傷害及同回合不限張數驗證全數通過！');
 
+console.log('\n[Test 15] 測試支援者卡「莉莉艾」（補滿6張 / 最初回合補滿8張）與「莉莉艾的決意」（手牌洗回抽6張 / 6張獎賞卡抽8張）...');
+const lillieGame = new PTCGGame(
+  'lillie_test',
+  { name: '玩家A', deck: { cardEntries: [] } },
+  { name: '玩家B', deck: { cardEntries: [] } }
+);
+const lP0 = lillieGame.players[0];
+lillieGame.activePlayerIndex = 0;
+lP0.deck = Array.from({ length: 20 }, (_, i) => ({ instanceId: `ld_${i}`, name: '基本火能量', supertype: 'energy' }));
+
+// 1. 最初回合（turn 2 後攻首回合）：手牌 2 張（含莉莉艾）-> 用掉莉莉艾剩 1 張 -> 抽 7 張補滿至 8 張
+lillieGame.turnNumber = 2;
+lP0.turnFlags.supporterPlayed = false;
+lP0.hand = [
+  { instanceId: 'lil_1', id: 'lillie', name: '莉莉艾', supertype: 'trainer', subtypes: ['Supporter'] },
+  { instanceId: 'keep_1', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'] }
+];
+const lilRes1 = lillieGame.playSupporter(0, 'lil_1');
+assert(lilRes1.success, '最初回合使用莉莉艾應成功');
+assert.strictEqual(lP0.hand.length, 8, '最初回合使用莉莉艾應補滿至 8 張手牌');
+
+// 2. 一般回合（turn 3）：手牌 3 張（含莉莉艾）-> 用掉莉莉艾剩 2 張 -> 抽 4 張補滿至 6 張
+lillieGame.turnNumber = 3;
+lP0.turnFlags.supporterPlayed = false;
+lP0.hand = [
+  { instanceId: 'lil_2', id: 'lillie', name: '莉莉艾', supertype: 'trainer', subtypes: ['Supporter'] },
+  { instanceId: 'k1', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'] },
+  { instanceId: 'k2', name: '火恐龍', supertype: 'pokemon', subtypes: ['Stage 1'] }
+];
+const lilRes2 = lillieGame.playSupporter(0, 'lil_2');
+assert(lilRes2.success, '一般回合使用莉莉艾應成功');
+assert.strictEqual(lP0.hand.length, 6, '一般回合使用莉莉艾應補滿至 6 張手牌');
+
+// 3. 「莉莉艾的決意」：剩餘 6 張獎賞卡時，手牌全洗回牌庫抽 8 張
+lP0.turnFlags.supporterPlayed = false;
+lP0.prizes = Array.from({ length: 6 }, (_, i) => ({ instanceId: `pz_${i}` }));
+lP0.hand = [
+  { instanceId: 'lild_1', id: 'lillies_determination', name: '莉莉艾的決意', supertype: 'trainer', subtypes: ['Supporter'] },
+  { instanceId: 'k3', name: '小火龍', supertype: 'pokemon', subtypes: ['Basic'] }
+];
+const lildRes = lillieGame.playSupporter(0, 'lild_1');
+assert(lildRes.success, '使用莉莉艾的決意應成功');
+assert.strictEqual(lP0.hand.length, 8, '剩餘 6 張獎賞卡時使用莉莉艾的決意應抽出 8 張');
+console.log('✓ 「莉莉艾」與「莉莉艾的決意」抽牌與條件規則驗證全數通過！');
+
 console.log('\n=================================================');
 console.log('🎉 所有單元測試與 PTCG 遊戲規則規範皆 100% 通過！');
 console.log('=================================================');
