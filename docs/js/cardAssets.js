@@ -193,7 +193,36 @@ const OFFICIAL_CARD_IMAGES = {
   '狗仔包': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_098_R_EN_MD.png',
   '火箭隊的謎擬Q': 'https://asia.pokemon-card.com/tw/card-img/tw00010996.png',
   '真菰': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/BLW/BLW_097_R_EN_MD.png',
-  '超級雪妖女ex': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_054_R_EN_MD.png'
+  '超級雪妖女ex': 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_054_R_EN_MD.png',
+  // Official Mega Evolution Tactical Decks (deck_01 & deck_02)
+  '超級噴火龍Xex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/003_6db0fc08.png',
+  '比克提尼': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/004_88250d7c.png',
+  '熔蟻獸': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/005_8e237407.png',
+  '萊希拉姆': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/006_d05f52ef.png',
+  '花舞鳥ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/007_a280db29.png',
+  '吉雉雞ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/008_a8b767bf.png',
+  '能量回收': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/009_6ae630ad.png',
+  '能量回收器': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/010_dc51c989.png',
+  '特殊紅牌': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/011_b14cfe57.png',
+  '貴重手推車': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/014_3180f8af.png',
+  '寶可平板': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/015_a899f1eb.png',
+  '夜間擔架': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/017_bf548b7e.png',
+  '氣球': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/018_21a1cad8.png',
+  '艾莉絲的鬥志': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/019_dcf1100a.png',
+  '小光': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/020_3caf3d91.png',
+  '吹火人': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/01/list/021_529c7f75.png',
+  '莉莉艾的皮皮ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/001_e3731725.png',
+  '超級沙奈朵ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/004_71eeb59d.png',
+  '拉帝亞斯ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/005_9c7416d6.png',
+  '輕飄飄': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/006_53973f42.png',
+  '胖嘟嘟ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/007_bafa9fd8.png',
+  '超級蒂安希ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/008_3c2e6b4e.png',
+  '米立龍': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/009_c3c2a917.png',
+  '喵喵ex': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/010_33bc5d07.png',
+  '奇跡修正檔': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/016_98abdec7.png',
+  '英雄斗篷': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/017_7bb05933.png',
+  '鬥子': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/020_8a3a2ab6.png',
+  '感應超能量': 'https://asia.pokemon-card.com/tw/archive/special/card/mt/images/locale/tw/deck/02/list/023_e2bb7ce0.png'
 };
 
 // Retrieve custom card images uploaded by user (persisted in localStorage)
