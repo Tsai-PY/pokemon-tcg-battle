@@ -97,63 +97,74 @@
     {
       id: 'deck_3',
       slot: 3,
-      name: '古劍豹ex 冰霜十字水牌組',
+      name: '超級巨牙鯊ex 飢渴惡潮牌組',
       author: '系統預設',
       authorPhone: '0988229731',
-      description: '水系無限充能！古劍豹ex抓水能量，戟脊龍「極低溫」單回合無限貼能，冰霜劍刃爆發單發破百傷害！',
+      description: '官方超級進化戰術牌組！由利牙魚進化為超級巨牙鯊ex（HP 330），搭配顫弦蠑螈「惡魔奏樂」與願增猿「腎上腺腦力」控傷附能，以「飢渴下巴」狂咬 270 點高傷！',
       cardEntries: [
-        { name: '古劍豹ex', count: 3 },
-        { name: '涼脊龍', count: 4 },
-        { name: '凍脊龍', count: 1 },
-        { name: '戟脊龍', count: 3 },
-        { name: '光輝甲賀忍蛙', count: 1 },
-        { name: '博士的研究', count: 4 },
-        { name: '老大的指令', count: 3 },
-        { name: '奇樹', count: 3 },
-        { name: '派帕', count: 3 },
-        { name: '巢穴球', count: 4 },
+        { name: '願增猿', count: 2 },
+        { name: '利牙魚', count: 4 },
+        { name: '超級巨牙鯊ex', count: 3 },
+        { name: '飯匙蛇', count: 2 },
+        { name: '毒電嬰', count: 3 },
+        { name: '顫弦蠑螈', count: 3 },
+        { name: '吉雉雞ex', count: 1 },
+        { name: '桃歹郎ex', count: 1 },
+        { name: '特殊紅牌', count: 1 },
+        { name: '好友寶芬', count: 4 },
         { name: '高級球', count: 4 },
-        { name: '神奇糖果', count: 4 },
-        { name: '寶可夢交替', count: 3 },
-        { name: '超級能量回收棒', count: 2 },
-        { name: '大地之器', count: 2 },
-        { name: '至尊捕捉器', count: 1 },
-        { name: '基本水能量', count: 15 }
+        { name: '頂尖捕捉器', count: 1 },
+        { name: '寶可平板', count: 4 },
+        { name: '夜間擔架', count: 1 },
+        { name: '龐克頭盔', count: 2 },
+        { name: '氣球', count: 2 },
+        { name: '艾莉絲的鬥志', count: 2 },
+        { name: '鬥子', count: 2 },
+        { name: '老大的指令', count: 2 },
+        { name: '莉莉艾的決意', count: 4 },
+        { name: '基本惡能量', count: 12 }
       ],
       totalCards: 60,
       valid: true,
-      updatedAt: new Date().toISOString()
+      updatedAt: '2026-11-26T01:30:00.000Z'
     },
     {
       id: 'deck_4',
       slot: 4,
-      name: '轟鳴月ex 古代暴走惡牌組',
+      name: '超級快龍ex 天空搬運龍牌組',
       author: '系統預設',
       authorPhone: '0988229731',
-      description: '古代悖謬的終極力量！「狂暴粉碎」直接強行氣絕任何巨大HP的防禦對手，配合災禍旋風強力進攻！',
+      description: '官方超級進化戰術牌組！由迷你龍→哈克龍進化為超級快龍ex（HP 370），搭配麻麻鰻「電氣發電機」與特性「天空搬運」靈活調度，使出「龍之滑翔」打出 330 點毀滅傷害！',
       cardEntries: [
-        { name: '轟鳴月ex', count: 4 },
-        { name: '波波', count: 3 },
-        { name: '比比鳥', count: 1 },
-        { name: '大比鳥ex', count: 2 },
-        { name: '光輝甲賀忍蛙', count: 1 },
-        { name: '博士的研究', count: 4 },
-        { name: '老大的指令', count: 3 },
-        { name: '奇樹', count: 3 },
-        { name: '派帕', count: 3 },
-        { name: '巢穴球', count: 4 },
+        { name: '凱路迪歐ex', count: 1 },
+        { name: '電飛鼠', count: 1 },
+        { name: '麻麻小魚', count: 3 },
+        { name: '麻麻鰻', count: 3 },
+        { name: '捷拉奧拉', count: 1 },
+        { name: '迷你龍', count: 4 },
+        { name: '哈克龍', count: 3 },
+        { name: '超級快龍ex', count: 2 },
+        { name: '米立龍', count: 1 },
+        { name: '喵喵ex', count: 1 },
+        { name: '超級袋獸ex', count: 1 },
+        { name: '特殊紅牌', count: 1 },
+        { name: '好友寶芬', count: 2 },
         { name: '高級球', count: 4 },
-        { name: '神奇糖果', count: 3 },
-        { name: '大地之器', count: 3 },
-        { name: '寶可夢交替', count: 2 },
-        { name: '勇氣護符', count: 2 },
-        { name: '超級能量回收棒', count: 1 },
-        { name: '至尊捕捉器', count: 1 },
-        { name: '基本惡能量', count: 16 }
+        { name: '神奇糖果', count: 2 },
+        { name: '寶可平板', count: 4 },
+        { name: '氣球', count: 2 },
+        { name: '極限腰帶', count: 1 },
+        { name: '艾莉絲的鬥志', count: 2 },
+        { name: '空手道王的演練', count: 1 },
+        { name: '琵魯', count: 2 },
+        { name: '老大的指令', count: 2 },
+        { name: '莉莉艾的決意', count: 4 },
+        { name: '基本水能量', count: 5 },
+        { name: '基本電能量', count: 7 }
       ],
       totalCards: 60,
       valid: true,
-      updatedAt: new Date().toISOString()
+      updatedAt: '2026-11-26T01:30:00.000Z'
     },
     {
       id: 'deck_5',
@@ -618,6 +629,14 @@
         }
         if (d[1] && d[1].name === '密勒頓ex 迅雷極速牌組') {
           d[1] = { ...DEFAULT_SHARED_DECKS[1] };
+          migrated = true;
+        }
+        if (d[2] && d[2].name === '古劍豹ex 冰霜十字水牌組') {
+          d[2] = { ...DEFAULT_SHARED_DECKS[2] };
+          migrated = true;
+        }
+        if (d[3] && d[3].name === '轟鳴月ex 古代暴走惡牌組') {
+          d[3] = { ...DEFAULT_SHARED_DECKS[3] };
           migrated = true;
         }
         if (migrated) {
@@ -2039,7 +2058,105 @@
   { id: 'miracle_patch', name: '奇跡修正檔', supertype: 'trainer', subtypes: ['Item'], text: '從自己的棄牌區選擇1張「基本超能量」卡，附於備戰區的【超】寶可夢身上。' },
   { id: 'heros_cape', name: '英雄斗篷', supertype: 'trainer', subtypes: ['Tool', 'ACE SPEC'], isAceSpec: true, text: '附有這張卡的寶可夢的最大HP「+100」。' },
   { id: 'hilda_supporter', name: '鬥子', supertype: 'trainer', subtypes: ['Supporter'], text: '從自己的牌庫選擇進化寶可夢卡與能量卡各1張加入手牌，並且重洗牌庫。' },
-  { id: 'telepathic_psychic_energy', name: '感應超能量', supertype: 'energy', subtypes: ['Special'], energyType: 'Psychic', text: '視為提供1個【超】能量。從手牌附於【超】寶可夢身上時，可從牌庫放置最多2張【超】基礎寶可夢至備戰區。' }
+  { id: 'telepathic_psychic_energy', name: '感應超能量', supertype: 'energy', subtypes: ['Special'], energyType: 'Psychic', text: '視為提供1個【超】能量。從手牌附於【超】寶可夢身上時，可從牌庫放置最多2張【超】基礎寶可夢至備戰區。' },
+  // ================= 官方超級進化戰術牌組 (deck_03 & deck_04) =================
+  {
+    id: 'munkidori_mt', name: '願增猿', supertype: 'pokemon', subtypes: ['Basic'], hp: 110, types: ['Psychic'],
+    ability: { name: '腎上腺腦力', text: '身上附有惡能量時，每回合可移動自己場上最多3個傷害指示物至對手場上寶可夢。' },
+    attacks: [{ name: '精神歪曲', cost: ['Psychic', 'Colorless'], damage: 60, text: '將對手的戰鬥寶可夢混亂。', statusEffect: 'confused' }],
+    weakness: { type: 'Darkness', value: '×2' }, resistance: { type: 'Fighting', value: '-30' }, retreatCost: 1
+  },
+  { id: 'carvanha_mt', name: '利牙魚', supertype: 'pokemon', subtypes: ['Basic'], hp: 70, types: ['Darkness'], attacks: [{ name: '突擊', cost: ['Darkness'], damage: 30, text: '這隻寶可夢也受到10點傷害。' }], weakness: { type: 'Grass', value: '×2' }, retreatCost: 1 },
+  {
+    id: 'mega_sharpedo_ex', name: '超級巨牙鯊ex', supertype: 'pokemon', subtypes: ['Stage 1', 'ex'], evolvesFrom: '利牙魚', hp: 330, types: ['Darkness'], isEx: true,
+    attacks: [
+      { name: '貪心之牙', cost: ['Darkness'], damage: 70, text: '從自己的牌庫抽出2張卡。' },
+      { name: '飢渴下巴', cost: ['Darkness', 'Darkness'], damage: 120, text: '若這隻寶可夢身上放置有傷害指示物，則增加150點傷害。' }
+    ],
+    weakness: { type: 'Grass', value: '×2' }, retreatCost: 0
+  },
+  {
+    id: 'seviper_mt', name: '飯匙蛇', supertype: 'pokemon', subtypes: ['Basic'], hp: 120, types: ['Darkness'],
+    ability: { name: '霸王力量', text: '場上有惡屬性超級進化寶可夢ex時，招式傷害+120。' },
+    attacks: [{ name: '漆黑之牙', cost: ['Darkness', 'Darkness', 'Darkness'], damage: 120, text: '' }],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 2
+  },
+  {
+    id: 'toxel_mt', name: '毒電嬰', supertype: 'pokemon', subtypes: ['Basic'], hp: 70, types: ['Darkness'],
+    attacks: [
+      { name: '呼朋引伴', cost: ['Darkness'], damage: 0, text: '從牌庫選最多2張基礎寶可夢放備戰區。' },
+      { name: '調皮踢', cost: ['Darkness', 'Colorless'], damage: 20, text: '' }
+    ],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 1
+  },
+  {
+    id: 'toxtricity_mt', name: '顫弦蠑螈', supertype: 'pokemon', subtypes: ['Stage 1'], evolvesFrom: '毒電嬰', hp: 140, types: ['Darkness'],
+    ability: { name: '惡魔奏樂', text: '從牌庫選1張基本惡能量附於備戰區惡寶可夢身上，並放2個傷害指示物。' },
+    attacks: [{ name: '重摑', cost: ['Darkness', 'Darkness', 'Colorless'], damage: 100, text: '' }],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 2
+  },
+  {
+    id: 'pecharunt_ex', name: '桃歹郎ex', supertype: 'pokemon', subtypes: ['Basic', 'ex'], hp: 190, types: ['Darkness'], isEx: true,
+    ability: { name: '支配鎖鏈', text: '選擇1隻備戰區惡寶可夢與戰鬥寶可夢互換並中毒。' },
+    attacks: [{ name: '煩煩爆炸', cost: ['Darkness', 'Darkness'], damage: 60, text: '造成對手已獲得獎賞卡張數×60點傷害。' }],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 1
+  },
+  { id: 'buddy_buddy_poffin', name: '好友寶芬', supertype: 'trainer', subtypes: ['Item'], text: '從牌庫選擇最多2張HP為70以下的基礎寶可夢放置於備戰區並重洗牌庫。' },
+  { id: 'prime_catcher_mt', name: '頂尖捕捉器', supertype: 'trainer', subtypes: ['Item', 'ACE SPEC'], isAceSpec: true, text: '選擇1隻對手的備戰寶可夢與戰鬥寶可夢互換，然後互換自己的戰鬥與備戰寶可夢。' },
+  { id: 'punk_helmet', name: '龐克頭盔', supertype: 'trainer', subtypes: ['Tool'], text: '附有這張卡的惡寶可夢在戰鬥場受傷時，在攻擊寶可夢身上放4個傷害指示物。' },
+  {
+    id: 'keldeo_ex', name: '凱路迪歐ex', supertype: 'pokemon', subtypes: ['Basic', 'ex'], hp: 210, types: ['Water'], isEx: true,
+    attacks: [
+      { name: '疾風直摘', cost: ['Water', 'Colorless'], damage: 30, text: '本回合從備戰區上場則增加90點傷害。' },
+      { name: '音波刀鋒', cost: ['Water', 'Colorless', 'Colorless'], damage: 120, text: '不計算對手戰鬥寶可夢身上的附加效果。' }
+    ],
+    weakness: { type: 'Lightning', value: '×2' }, retreatCost: 1
+  },
+  {
+    id: 'emolga_mt', name: '電飛鼠', supertype: 'pokemon', subtypes: ['Basic'], hp: 70, types: ['Lightning'],
+    attacks: [
+      { name: '小使者', cost: ['Colorless'], damage: 0, text: '從牌庫選最多2張基本能量加入手牌。' },
+      { name: '天空迴旋', cost: ['Lightning'], damage: 30, text: '將這隻寶可夢與附加的卡全部放回手牌。' }
+    ],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 0
+  },
+  { id: 'tynamo_mt', name: '麻麻小魚', supertype: 'pokemon', subtypes: ['Basic'], hp: 40, types: ['Lightning'], attacks: [{ name: '紋絲不動', cost: ['Colorless'], damage: 0, text: '恢復10 HP。' }], weakness: { type: 'Fighting', value: '×2' }, retreatCost: 1 },
+  {
+    id: 'eelektrik_mt', name: '麻麻鰻', supertype: 'pokemon', subtypes: ['Stage 1'], evolvesFrom: '麻麻小魚', hp: 90, types: ['Lightning'],
+    ability: { name: '電氣發電機', text: '從棄牌區選擇1張基本雷能量附於備戰寶可夢身上。' },
+    attacks: [{ name: '雷電球', cost: ['Lightning', 'Lightning', 'Colorless'], damage: 50, text: '' }],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 2
+  },
+  {
+    id: 'zeraora_mt', name: '捷拉奧拉', supertype: 'pokemon', subtypes: ['Basic'], hp: 100, types: ['Lightning'],
+    attacks: [
+      { name: '抓', cost: ['Colorless'], damage: 20, text: '' },
+      { name: '閃電急襲', cost: ['Lightning', 'Lightning', 'Lightning'], damage: 210, text: '丟棄全部能量，對對手備戰區1隻寶可夢ex造成210點傷害。' }
+    ],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 1
+  },
+  { id: 'dratini_mt', name: '迷你龍', supertype: 'pokemon', subtypes: ['Basic'], hp: 80, types: ['Dragon'], attacks: [{ name: '頭錘', cost: ['Water', 'Lightning'], damage: 30, text: '' }], retreatCost: 2 },
+  {
+    id: 'dragonair_mt', name: '哈克龍', supertype: 'pokemon', subtypes: ['Stage 1'], evolvesFrom: '迷你龍', hp: 100, types: ['Dragon'],
+    ability: { name: '進化指引', text: '身上附有能量時，可從牌庫選1張進化寶可夢加入手牌。' },
+    attacks: [{ name: '尾鞭', cost: ['Water', 'Lightning'], damage: 60, text: '' }],
+    retreatCost: 2
+  },
+  {
+    id: 'mega_dragonite_ex', name: '超級快龍ex', supertype: 'pokemon', subtypes: ['Stage 2', 'ex'], evolvesFrom: '哈克龍', hp: 370, types: ['Dragon'], isEx: true,
+    ability: { name: '天空搬運', text: '在自己的回合時可使用1次，將戰鬥寶可夢與備戰寶可夢互換。' },
+    attacks: [{ name: '龍之滑翔', cost: ['Water', 'Lightning', 'Lightning'], damage: 330, text: '選擇2個這隻寶可夢身上附加的能量丟棄。' }],
+    retreatCost: 2
+  },
+  {
+    id: 'mega_kangaskhan_ex', name: '超級袋獸ex', supertype: 'pokemon', subtypes: ['Basic', 'ex'], hp: 300, types: ['Colorless'], isEx: true,
+    ability: { name: '使者衝刺', text: '在戰鬥場上時每回合可從牌庫抽2張卡。' },
+    attacks: [{ name: '機關槍合擊', cost: ['Colorless', 'Colorless', 'Colorless'], damage: 200, text: '擲硬幣直到出現反面，增加正面次數×50點傷害。' }],
+    weakness: { type: 'Fighting', value: '×2' }, retreatCost: 2
+  },
+  { id: 'maximum_belt', name: '極限腰帶', supertype: 'trainer', subtypes: ['Tool', 'ACE SPEC'], isAceSpec: true, text: '對對手的戰鬥場寶可夢ex造成的傷害+50點。' },
+  { id: 'black_belts_training', name: '空手道王的演練', supertype: 'trainer', subtypes: ['Supporter'], text: '本回合自己的寶可夢對對手戰鬥場寶可夢ex造成的傷害+40點。' },
+  { id: 'giacomo_biru', name: '琵魯', supertype: 'trainer', subtypes: ['Supporter'], text: '從牌庫抽卡直到手牌滿5張為止，抽卡前可先丟棄任意數量手牌。' }
 ];
 
 
